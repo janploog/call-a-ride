@@ -4,7 +4,12 @@ import * as Location from "expo-location";
 import { Link, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { Linking, Pressable, Switch, Text, View } from "react-native";
-import { respondToOffer, startStripeOnboarding } from "../src/lib/api";
+import {
+  getDriverProfile,
+  respondToOffer,
+  startStripeOnboarding,
+  type DriverProfile,
+} from "../src/lib/api";
 import { openDriverSocket, type DriverSocket } from "../src/lib/ws";
 import { colors, styles } from "../src/ui";
 
@@ -14,14 +19,18 @@ export default function DriverHome() {
   const router = useRouter();
   const [online, setOnline] = useState(false);
   const [offer, setOffer] = useState<RideOffer | null>(null);
+  const [profile, setProfile] = useState<DriverProfile | null>(null);
   const [error, setError] = useState<string | null>(null);
   const socketRef = useRef<DriverSocket | null>(null);
   const watcherRef = useRef<Location.LocationSubscription | null>(null);
 
   useEffect(() => {
     getCurrentUser().catch(() => router.replace("/sign-in"));
+    getDriverProfile().then(setProfile).catch(() => {});
     return () => goOffline();
   }, [router]);
+
+  const approved = profile?.verificationStatus === "APPROVED";
 
   function goOffline() {
     watcherRef.current?.remove();
@@ -109,9 +118,34 @@ export default function DriverHome() {
           : "Gehe online, um Fahrtanfragen zu erhalten."}
       </Text>
 
+      {profile && !approved ? (
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: colors.border,
+            borderRadius: 12,
+            padding: 14,
+            gap: 6,
+          }}
+        >
+          <Text style={{ fontSize: 15, color: colors.text, fontWeight: "600" }}>
+            {profile.verificationStatus === "PENDING"
+              ? "Deine Dokumente werden geprüft."
+              : profile.verificationStatus === "REJECTED"
+                ? "Deine Verifizierung wurde abgelehnt – bitte Dokumente erneut einreichen."
+                : "Bevor du fahren kannst, müssen wir deine Dokumente prüfen."}
+          </Text>
+          <Link href="/documents" style={[styles.linkText, { marginTop: 0, textAlign: "left" }]}>
+            Dokumente hochladen →
+          </Link>
+        </View>
+      ) : null}
+
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <Switch value={online} onValueChange={toggleOnline} />
-        <Text style={{ fontSize: 16, color: colors.text }}>Fahrbereit</Text>
+        <Switch value={online} onValueChange={toggleOnline} disabled={!approved} />
+        <Text style={{ fontSize: 16, color: approved ? colors.text : colors.muted }}>
+          Fahrbereit{approved ? "" : " (erst nach Verifizierung)"}
+        </Text>
       </View>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}

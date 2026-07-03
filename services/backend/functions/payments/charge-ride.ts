@@ -2,6 +2,7 @@ import type { EventBridgeEvent } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { splitFare } from "@call-a-ride/core";
+import { getPricingConfig } from "../lib/pricing-config";
 import { getStripe } from "../lib/stripe";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -63,7 +64,8 @@ export const handler = async (
   }
 
   const totalCents = Number(ride.estimatedFareCents);
-  const { platformFeeCents, driverPayoutCents } = splitFare(totalCents);
+  const pricing = await getPricingConfig();
+  const { platformFeeCents, driverPayoutCents } = splitFare(totalCents, pricing);
   const driverAccountId = driver?.stripeAccountId as string | undefined;
 
   try {

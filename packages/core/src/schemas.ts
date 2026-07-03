@@ -43,6 +43,27 @@ export const rideSchema = z.object({
 });
 export type Ride = z.infer<typeof rideSchema>;
 
+/** Preiskonfiguration (config-Tabelle, Key "pricing"; Admin-editierbar). */
+export const pricingConfigSchema = z.object({
+  baseFareCents: z.number().int().nonnegative(),
+  perKmCents: z.number().int().nonnegative(),
+  perMinuteCents: z.number().int().nonnegative(),
+  minimumFareCents: z.number().int().nonnegative(),
+  commissionRate: z.number().min(0).max(0.5),
+});
+
+export const verificationStatusSchema = z.enum(["UNSUBMITTED", "PENDING", "APPROVED", "REJECTED"]);
+export type VerificationStatus = z.infer<typeof verificationStatusSchema>;
+
+export const DRIVER_DOCUMENT_TYPES = [
+  "fuehrerschein",
+  "p-schein",
+  "fahrzeugschein",
+  "versicherung",
+] as const;
+export const driverDocumentTypeSchema = z.enum(DRIVER_DOCUMENT_TYPES);
+export type DriverDocumentType = z.infer<typeof driverDocumentTypeSchema>;
+
 /** Ergebnis der Adresssuche (GET /places/search). */
 export const placeResultSchema = z.object({
   label: z.string(),

@@ -38,6 +38,19 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   }
   const { position, available, activeRideId } = parsed.data;
 
+  // Nur verifizierte Fahrer nehmen am Matching teil
+  if (available) {
+    const { Item: user } = await ddb.send(
+      new GetCommand({
+        TableName: process.env.USERS_TABLE,
+        Key: { userId: driverId },
+      }),
+    );
+    if (user?.verificationStatus !== "APPROVED") {
+      return { statusCode: 403, body: "driver not verified" };
+    }
+  }
+
   const geohash = encodeGeohash(position);
   const now = new Date().toISOString();
 

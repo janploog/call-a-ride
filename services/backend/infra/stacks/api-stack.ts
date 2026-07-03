@@ -8,6 +8,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import { Runtime, type IFunction } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction, type NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
+import type * as s3 from "aws-cdk-lib/aws-s3";
 import type * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import type { Construct } from "constructs";
 import { fileURLToPath } from "node:url";
@@ -25,6 +26,8 @@ export interface ApiStackProps extends StackProps {
   ridesTable: dynamodb.ITable;
   configTable: dynamodb.ITable;
   connectionsTable: dynamodb.ITable;
+  usersTable: dynamodb.ITable;
+  documentsBucket: s3.IBucket;
   rideStateMachine: sfn.IStateMachine;
   webSocketApi: apigwv2.WebSocketApi;
   wsManagementEndpoint: string;
@@ -47,6 +50,8 @@ export class ApiStack extends Stack {
         STAGE: props.stage,
         RIDES_TABLE: props.ridesTable.tableName,
         CONFIG_TABLE: props.configTable.tableName,
+        USERS_TABLE: props.usersTable.tableName,
+        DOCUMENTS_BUCKET: props.documentsBucket.bucketName,
         RIDE_STATE_MACHINE_ARN: props.rideStateMachine.stateMachineArn,
         NODE_OPTIONS: "--enable-source-maps",
       },
@@ -128,6 +133,45 @@ export class ApiStack extends Stack {
     });
     props.ridesTable.grantReadData(earningsFn);
 
+    const driversMeFn = new NodejsFunction(this, "DriversMeFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "http/drivers-me.ts"),
+    });
+    props.usersTable.grantReadData(driversMeFn);
+
+    const driverDocumentsFn = new NodejsFunction(this, "DriverDocumentsFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "http/driver-documents.ts"),
+    });
+    props.usersTable.grantReadWriteData(driverDocumentsFn);
+    props.documentsBucket.grantPut(driverDocumentsFn);
+
+    const rideRatingFn = new NodejsFunction(this, "RideRatingFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "http/rides-rating.ts"),
+    });
+    props.ridesTable.grantReadWriteData(rideRatingFn);
+    props.usersTable.grantReadWriteData(rideRatingFn);
+
+    const adminDriversFn = new NodejsFunction(this, "AdminDriversFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "admin/drivers.ts"),
+    });
+    props.usersTable.grantReadWriteData(adminDriversFn);
+    props.documentsBucket.grantRead(adminDriversFn);
+
+    const adminRidesFn = new NodejsFunction(this, "AdminRidesFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "admin/rides.ts"),
+    });
+    props.ridesTable.grantReadData(adminRidesFn);
+
+    const adminPricingFn = new NodejsFunction(this, "AdminPricingFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "admin/pricing.ts"),
+    });
+    props.configTable.grantReadWriteData(adminPricingFn);
+
     const authorizer = new HttpUserPoolAuthorizer("UserPoolAuthorizer", props.userPool, {
       userPoolClients: [props.userPoolClient],
     });
@@ -162,6 +206,15 @@ export class ApiStack extends Stack {
       { path: "/payments/setup-intent", method: apigwv2.HttpMethod.POST, fn: props.setupIntentFn, name: "SetupIntent" },
       { path: "/drivers/stripe-onboarding", method: apigwv2.HttpMethod.POST, fn: props.stripeOnboardingFn, name: "StripeOnboarding" },
       { path: "/drivers/me/earnings", method: apigwv2.HttpMethod.GET, fn: earningsFn, name: "DriverEarnings" },
+      { path: "/drivers/me", method: apigwv2.HttpMethod.GET, fn: driversMeFn, name: "DriversMe" },
+      { path: "/drivers/documents/upload-url", method: apigwv2.HttpMethod.POST, fn: driverDocumentsFn, name: "DriverDocuments" },
+      { path: "/rides/{rideId}/rating", method: apigwv2.HttpMethod.POST, fn: rideRatingFn, name: "RideRating" },
+      { path: "/admin/drivers", method: apigwv2.HttpMethod.GET, fn: adminDriversFn, name: "AdminDriversList" },
+      { path: "/admin/drivers/{userId}/documents", method: apigwv2.HttpMethod.GET, fn: adminDriversFn, name: "AdminDriverDocs" },
+      { path: "/admin/drivers/{userId}/verify", method: apigwv2.HttpMethod.POST, fn: adminDriversFn, name: "AdminDriverVerify" },
+      { path: "/admin/rides", method: apigwv2.HttpMethod.GET, fn: adminRidesFn, name: "AdminRides" },
+      { path: "/admin/config/pricing", method: apigwv2.HttpMethod.GET, fn: adminPricingFn, name: "AdminPricingGet" },
+      { path: "/admin/config/pricing", method: apigwv2.HttpMethod.PUT, fn: adminPricingFn, name: "AdminPricingPut" },
     ];
     for (const route of authedRoutes) {
       httpApi.addRoutes({

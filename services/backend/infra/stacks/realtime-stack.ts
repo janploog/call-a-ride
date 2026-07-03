@@ -20,6 +20,7 @@ export interface RealtimeStackProps extends StackProps {
   connectionsTable: dynamodb.ITable;
   driverLocationsTable: dynamodb.ITable;
   ridesTable: dynamodb.ITable;
+  usersTable: dynamodb.ITable;
   userPool: cognito.IUserPool;
   userPoolClient: cognito.IUserPoolClient;
 }
@@ -69,6 +70,7 @@ export class RealtimeStack extends Stack {
         ...lambdaDefaults.environment,
         DRIVER_LOCATIONS_TABLE: props.driverLocationsTable.tableName,
         RIDES_TABLE: props.ridesTable.tableName,
+        USERS_TABLE: props.usersTable.tableName,
       },
     });
 
@@ -78,6 +80,7 @@ export class RealtimeStack extends Stack {
     props.connectionsTable.grantReadWriteData(locationUpdateFn);
     props.driverLocationsTable.grantReadWriteData(locationUpdateFn);
     props.ridesTable.grantReadData(locationUpdateFn);
+    props.usersTable.grantReadData(locationUpdateFn);
 
     this.webSocketApi = new apigwv2.WebSocketApi(this, "WsApi", {
       apiName: `car-${props.stage}-ws`,

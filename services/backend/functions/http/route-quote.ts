@@ -1,6 +1,7 @@
 import type { APIGatewayProxyHandlerV2WithJWTAuthorizer } from "aws-lambda";
 import { coordinateSchema, estimateFareCents, type RouteQuote } from "@call-a-ride/core";
 import { z } from "zod";
+import { getPricingConfig } from "../lib/pricing-config";
 import { calculateRoute } from "../lib/routing";
 
 const querySchema = z.object({
@@ -28,11 +29,18 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
     return json(400, { error: "invalid_coordinates" });
   }
 
-  const route = await calculateRoute(pickup.data, dropoff.data);
+  const [route, pricing] = await Promise.all([
+    calculateRoute(pickup.data, dropoff.data),
+    getPricingConfig(),
+  ]);
   const quote: RouteQuote = {
     distanceMeters: route.distanceMeters,
     durationSeconds: route.durationSeconds,
-    estimatedFareCents: estimateFareCents(route.distanceMeters, route.durationSeconds),
+    estimatedFareCents: estimateFareCents(
+      route.distanceMeters,
+      route.durationSeconds,
+      pricing,
+    ),
     approximate: route.approximate,
   };
   return json(200, quote);

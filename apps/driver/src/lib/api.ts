@@ -68,3 +68,37 @@ export interface Earnings {
 export async function getEarnings(): Promise<Earnings> {
   return expectOk(await authFetch("/drivers/me/earnings"));
 }
+
+export interface DriverProfile {
+  verificationStatus: "UNSUBMITTED" | "PENDING" | "APPROVED" | "REJECTED";
+  payoutsEnabled: boolean;
+  documents: Record<string, string>;
+  ratingCount: number;
+  ratingAverage: number | null;
+}
+
+export async function getDriverProfile(): Promise<DriverProfile> {
+  return expectOk(await authFetch("/drivers/me"));
+}
+
+/** Holt eine presigned Upload-URL und lädt das Dokument direkt zu S3 hoch. */
+export async function uploadDocument(
+  documentType: string,
+  contentType: string,
+  fileUri: string,
+): Promise<void> {
+  const { uploadUrl } = await expectOk<{ uploadUrl: string }>(
+    await authFetch("/drivers/documents/upload-url", {
+      method: "POST",
+      body: JSON.stringify({ documentType, contentType }),
+    }),
+  );
+  const file = await fetch(fileUri);
+  const blob = await file.blob();
+  const res = await fetch(uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": contentType },
+    body: blob,
+  });
+  if (!res.ok) throw new Error(`Upload fehlgeschlagen (${res.status})`);
+}

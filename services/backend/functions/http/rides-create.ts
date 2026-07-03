@@ -4,6 +4,7 @@ import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
 import { randomUUID } from "node:crypto";
 import { estimateFareCents, rideRequestSchema, type Ride } from "@call-a-ride/core";
+import { getPricingConfig } from "../lib/pricing-config";
 import { calculateRoute } from "../lib/routing";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -21,7 +22,10 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
   }
   const request = parsed.data;
 
-  const route = await calculateRoute(request.pickup, request.dropoff);
+  const [route, pricing] = await Promise.all([
+    calculateRoute(request.pickup, request.dropoff),
+    getPricingConfig(),
+  ]);
   if (route.distanceMeters < 100) {
     return json(400, { error: "pickup_and_dropoff_too_close" });
   }
@@ -35,7 +39,11 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
     dropoff: request.dropoff,
     pickupAddress: request.pickupAddress,
     dropoffAddress: request.dropoffAddress,
-    estimatedFareCents: estimateFareCents(route.distanceMeters, route.durationSeconds),
+    estimatedFareCents: estimateFareCents(
+      route.distanceMeters,
+      route.durationSeconds,
+      pricing,
+    ),
     distanceMeters: route.distanceMeters,
     durationSeconds: route.durationSeconds,
     createdAt: now,
@@ -45,7 +53,8 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
   await ddb.send(
     new PutCommand({
       TableName: process.env.RIDES_TABLE,
-      Item: ride,
+      // entityType speist den byDate-Index (chronologische Admin-Liste)
+      Item: { ...ride, entityType: "RIDE" },
       ConditionExpression: "attribute_not_exists(rideId)",
     }),
   );

@@ -1,0 +1,34 @@
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #111827;
+  background: #f9fafb;
+}
+.container { max-width: 960px; margin: 0 auto; padding: 24px; }
+h1 { font-size: 24px; }
+h2 { font-size: 18px; margin-top: 32px; }
+nav { display: flex; gap: 8px; margin: 16px 0 24px; }
+nav button {
+  padding: 8px 16px; border: 1px solid #d1d5db; background: #fff;
+  border-radius: 8px; cursor: pointer; font-size: 14px;
+}
+nav button.active { background: #111827; color: #fff; border-color: #111827; }
+table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; }
+th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e5e7eb; font-size: 14px; }
+button.action {
+  padding: 6px 12px; border: none; border-radius: 6px; cursor: pointer;
+  font-size: 13px; margin-right: 6px;
+}
+button.approve { background: #15803d; color: #fff; }
+button.reject { background: #b91c1c; color: #fff; }
+button.primary { background: #111827; color: #fff; padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; }
+form.pricing { display: grid; gap: 12px; max-width: 380px; background: #fff; padding: 20px; border-radius: 8px; }
+form.pricing label { display: grid; gap: 4px; font-size: 14px; }
+form.pricing input, .login input {
+  padding: 8px 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px;
+}
+.login { display: grid; gap: 12px; max-width: 320px; margin: 80px auto; background: #fff; padding: 24px; border-radius: 12px; }
+.error { color: #b91c1c; font-size: 14px; }
+.muted { color: #6b7280; font-size: 13px; }
+.docs a { margin-right: 12px; font-size: 13px; }

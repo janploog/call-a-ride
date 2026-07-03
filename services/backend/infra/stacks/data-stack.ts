@@ -1,5 +1,6 @@
-import { RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
+import { Duration, RemovalPolicy, Stack, type StackProps } from "aws-cdk-lib";
 import * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as s3 from "aws-cdk-lib/aws-s3";
 import type { Construct } from "constructs";
 
 export interface DataStackProps extends StackProps {
@@ -12,6 +13,8 @@ export class DataStack extends Stack {
   readonly driverLocationsTable: dynamodb.Table;
   readonly connectionsTable: dynamodb.Table;
   readonly configTable: dynamodb.Table;
+  /** Fahrer-Dokumente (Führerschein, P-Schein, …) – privat, nur presigned URLs */
+  readonly documentsBucket: s3.Bucket;
 
   constructor(scope: Construct, id: string, props: DataStackProps) {
     super(scope, id, props);
@@ -36,6 +39,11 @@ export class DataStack extends Stack {
       indexName: "byStripeAccount",
       partitionKey: { name: "stripeAccountId", type: dynamodb.AttributeType.STRING },
     });
+    // Verifizierungsqueue im Admin-Dashboard
+    this.usersTable.addGlobalSecondaryIndex({
+      indexName: "byVerificationStatus",
+      partitionKey: { name: "verificationStatus", type: dynamodb.AttributeType.STRING },
+    });
 
     this.ridesTable = new dynamodb.Table(this, "Rides", {
       ...common,
@@ -55,6 +63,12 @@ export class DataStack extends Stack {
     this.ridesTable.addGlobalSecondaryIndex({
       indexName: "byStatus",
       partitionKey: { name: "status", type: dynamodb.AttributeType.STRING },
+      sortKey: { name: "createdAt", type: dynamodb.AttributeType.STRING },
+    });
+    // Chronologische Gesamtliste fürs Admin-Dashboard (entityType ist konstant "RIDE")
+    this.ridesTable.addGlobalSecondaryIndex({
+      indexName: "byDate",
+      partitionKey: { name: "entityType", type: dynamodb.AttributeType.STRING },
       sortKey: { name: "createdAt", type: dynamodb.AttributeType.STRING },
     });
 
@@ -86,6 +100,24 @@ export class DataStack extends Stack {
       ...common,
       tableName: `car-${props.stage}-config`,
       partitionKey: { name: "configKey", type: dynamodb.AttributeType.STRING },
+    });
+
+    this.documentsBucket = new s3.Bucket(this, "DriverDocuments", {
+      bucketName: `car-${props.stage}-driver-documents-${this.account}`,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
+      encryption: s3.BucketEncryption.S3_MANAGED,
+      enforceSSL: true,
+      versioned: props.stage === "prod",
+      removalPolicy,
+      autoDeleteObjects: props.stage !== "prod",
+      cors: [
+        {
+          allowedMethods: [s3.HttpMethods.PUT, s3.HttpMethods.GET],
+          allowedOrigins: ["*"],
+          allowedHeaders: ["*"],
+          maxAge: Duration.hours(1).toSeconds(),
+        },
+      ],
     });
   }
 }

@@ -10,7 +10,8 @@ freien Fahrern, Start lokal in einer Stadt.
 | Pfad | Inhalt |
 |---|---|
 | `apps/rider` | Fahrgast-App (Expo / React Native, expo-router, Amplify-Auth, MapLibre) |
-| `apps/driver` | Fahrer-App (Online-Status, Fahrtangebote, Positions-Streaming) |
+| `apps/driver` | Fahrer-App (Online-Status, Fahrtangebote, Positions-Streaming, Dokumenten-Upload) |
+| `apps/admin` | Admin-Dashboard (React/Vite): Verifizierungsqueue, Fahrten, Preise |
 | `packages/core` | Geteilte Domain-Logik: Zod-Schemas, Preisberechnung, Geohash (pure TS, getestet) |
 | `services/backend` | Lambda-Handler (TypeScript) + AWS-CDK-Infrastruktur |
 
@@ -52,6 +53,18 @@ aws secretsmanager put-secret-value --secret-id car-dev-stripe \
 Publishable Key (`pk_test_…`) in `apps/rider/.env` als
 `EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` eintragen.
 
+### Admin-Zugang anlegen
+
+```bash
+aws cognito-idp admin-create-user --user-pool-id <UserPoolId> \
+  --username admin@example.com --user-attributes Name=email,Value=admin@example.com Name=email_verified,Value=true Name=phone_number,Value=+491700000000 \
+  --temporary-password 'Anfang12345!'
+aws cognito-idp admin-add-user-to-group --user-pool-id <UserPoolId> \
+  --username admin@example.com --group-name admin
+# Dashboard: cd apps/admin && cp .env.example .env  # Werte eintragen
+pnpm --filter @call-a-ride/admin dev
+```
+
 ### Rider-App starten
 
 Stack-Outputs (User-Pool-IDs, API-URLs) in `apps/rider/.env` eintragen
@@ -70,20 +83,19 @@ npx expo run:android   # oder run:ios — Dev-Build erforderlich
 
 ## Stand
 
-**Phase 3 (Zahlungen)** gemäß [Roadmap](docs/architecture.md#4-roadmap):
+**Phase 4 (Fahrer-Onboarding & Admin)** gemäß [Roadmap](docs/architecture.md#4-roadmap):
 
-- Fahrgast hinterlegt eine Karte über die Stripe PaymentSheet (SetupIntent,
-  off-session-fähig); nach Fahrtende bucht ein EventBridge-getriggertes
-  Lambda den Fahrpreis automatisch ab
-- Destination Charge mit Provisions-Split: Plattform-Anteil bleibt,
-  Rest geht an das Stripe-Connect-Konto (Express) des Fahrers
-- Fahrer-Onboarding per Stripe-Link aus der App; account.updated-Webhook
-  pflegt payoutsEnabled; Verdienstübersicht (heute/Woche/gesamt) in der App
-- Stripe-Keys liegen im Secrets Manager, der Webhook prüft Signaturen
+- Fahrer laden Pflichtdokumente (Führerschein, P-Schein, Fahrzeugschein,
+  Versicherung) per presigned S3-Upload hoch; ohne Freischaltung
+  (APPROVED) kein Online-Gehen — serverseitig erzwungen
+- Admin-Dashboard: Verifizierungsqueue mit Dokumenten-Ansicht und
+  Freischalten/Ablehnen, chronologische Fahrtenliste mit Zahlungsstatus,
+  Preis-/Provisionskonfiguration zur Laufzeit (config-Tabelle, 60-s-Cache)
+- Beidseitige Bewertungen nach Fahrtende (einmal pro Seite,
+  Aggregat am bewerteten Nutzer)
 
-Frühere Phasen: Walking Skeleton (0), Rider-Kernflow mit Location-Routing
-und Ride-Statemachine (1), Driver-App mit echtem Geohash-Matching und
-Live-Tracking (2).
+Frühere Phasen: Walking Skeleton (0), Rider-Kernflow (1), Driver-App mit
+Matching und Live-Tracking (2), Stripe-Zahlungen (3).
 
-Noch offen für Phase 4+: Fahrer-Verifizierung mit Dokumenten-Upload,
-Admin-Dashboard, Bewertungen, Stornierung, Observability-Alarme.
+Noch offen für Phase 5: Stornierung, Observability-Alarme, Budget-Wächter,
+Smoke-Test.
