@@ -3,6 +3,7 @@ import { AuthStack } from "../stacks/auth-stack";
 import { DataStack } from "../stacks/data-stack";
 import { ApiStack } from "../stacks/api-stack";
 import { LocationStack } from "../stacks/location-stack";
+import { ObservabilityStack } from "../stacks/observability-stack";
 import { PaymentsStack } from "../stacks/payments-stack";
 import { RealtimeStack } from "../stacks/realtime-stack";
 import { RideFlowStack } from "../stacks/rideflow-stack";
@@ -65,3 +66,9 @@ new ApiStack(app, `${prefix}-api`, {
   stripeWebhookFn: payments.webhookFn,
 });
 new LocationStack(app, `${prefix}-location`, { env, stage });
+new ObservabilityStack(app, `${prefix}-observability`, {
+  env,
+  stage,
+  rideStateMachine: rideFlow.stateMachine,
+  alarmEmail: app.node.tryGetContext("alarmEmail"),
+});

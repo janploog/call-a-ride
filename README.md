@@ -83,19 +83,30 @@ npx expo run:android   # oder run:ios — Dev-Build erforderlich
 
 ## Stand
 
-**Phase 4 (Fahrer-Onboarding & Admin)** gemäß [Roadmap](docs/architecture.md#4-roadmap):
+Alle MVP-Phasen der [Roadmap](docs/architecture.md#4-roadmap) sind umgesetzt:
 
-- Fahrer laden Pflichtdokumente (Führerschein, P-Schein, Fahrzeugschein,
-  Versicherung) per presigned S3-Upload hoch; ohne Freischaltung
-  (APPROVED) kein Online-Gehen — serverseitig erzwungen
-- Admin-Dashboard: Verifizierungsqueue mit Dokumenten-Ansicht und
-  Freischalten/Ablehnen, chronologische Fahrtenliste mit Zahlungsstatus,
-  Preis-/Provisionskonfiguration zur Laufzeit (config-Tabelle, 60-s-Cache)
-- Beidseitige Bewertungen nach Fahrtende (einmal pro Seite,
-  Aggregat am bewerteten Nutzer)
+| Phase | Inhalt |
+|---|---|
+| 0 | Walking Skeleton: Monorepo, CDK-Grundstack, Cognito-Login, WebSocket-Echo |
+| 1 | Rider-Kernflow: Location-Routing/Geocoding, Preis-Quote, Ride-Statemachine, Live-Status |
+| 2 | Driver-App, Geohash-Matching mit Angebots-Timeout, Live-Tracking, WS-JWT-Auth |
+| 3 | Stripe Connect: PaymentSheet, Off-Session-Charge mit Provisions-Split, Webhook, Verdienst |
+| 4 | Fahrer-Verifizierung (S3-Dokumente, Admin-Gate), Admin-Dashboard, Preiskonfiguration, Bewertungen |
+| 5 | Stornierung (inkl. Statemachine-Stop + Fahrer-Info), Alarme, Budget-Wächter, Smoke-Test |
 
-Frühere Phasen: Walking Skeleton (0), Rider-Kernflow (1), Driver-App mit
-Matching und Live-Tracking (2), Stripe-Zahlungen (3).
+### Beta-Checkliste (manuell, vor dem ersten echten Fahrgast)
 
-Noch offen für Phase 5: Stornierung, Observability-Alarme, Budget-Wächter,
-Smoke-Test.
+1. `cdk deploy --all -c stage=dev -c alarmEmail=du@example.com`, Stripe-Secret
+   befüllen, Smoke-Test: `API_URL=… node scripts/smoke.mjs`
+2. Kompletter Zwei-Geräte-Durchlauf: Fahrer-Dokumente → Admin-Freischaltung →
+   online gehen → Buchung → Angebot → Fahrt → automatische Zahlung → Bewertung
+3. Storno-Fälle: vor Matching, während Angebot, nach Zuweisung
+4. iOS/Android-Verhalten bei Hintergrund/Sperrbildschirm der Fahrer-App prüfen
+   (Background-Location ist bewusst noch nicht aktiviert)
+5. AGB/Datenschutzerklärung und PBefG-Klärung (siehe docs/architecture.md, Risiko 1)
+
+### Bewusst offen (nach der Beta)
+
+Expo-Push zusätzlich zum WebSocket-Kanal, Hintergrund-Standort, Belege per
+E-Mail (SES), Nummern-Maskierung, gemeinsames UI-Paket für beide Apps,
+CI-Deploy-Pipeline mit OIDC.

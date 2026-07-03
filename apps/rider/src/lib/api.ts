@@ -65,3 +65,16 @@ export interface SetupIntentResponse {
 export async function createSetupIntent(): Promise<SetupIntentResponse> {
   return expectOk(await authFetch("/payments/setup-intent", { method: "POST" }));
 }
+
+export async function cancelRide(rideId: string): Promise<void> {
+  await expectOk(await authFetch(`/rides/${rideId}/cancel`, { method: "POST" }));
+}
+
+export async function rateRide(rideId: string, stars: number): Promise<void> {
+  await expectOk(
+    await authFetch(`/rides/${rideId}/rating`, {
+      method: "POST",
+      body: JSON.stringify({ stars }),
+    }),
+  );
+}

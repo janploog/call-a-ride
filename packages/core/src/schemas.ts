@@ -110,6 +110,10 @@ export const serverMessageSchema = z.discriminatedUnion("type", [
     position: coordinateSchema,
   }),
   z.object({
+    type: z.literal("rideCancelled"),
+    rideId: z.string(),
+  }),
+  z.object({
     type: z.literal("rideOffer"),
     rideId: z.string(),
     pickup: coordinateSchema,

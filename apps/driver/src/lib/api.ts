@@ -50,6 +50,15 @@ export async function updateRideStatus(
   );
 }
 
+export async function rateRide(rideId: string, stars: number): Promise<void> {
+  await expectOk(
+    await authFetch(`/rides/${rideId}/rating`, {
+      method: "POST",
+      body: JSON.stringify({ stars }),
+    }),
+  );
+}
+
 /** Startet das Stripe-Connect-Onboarding und liefert die Onboarding-URL. */
 export async function startStripeOnboarding(): Promise<string> {
   const data = await expectOk<{ url: string }>(

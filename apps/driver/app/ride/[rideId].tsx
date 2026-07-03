@@ -3,9 +3,9 @@ import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
-import { getRide, updateRideStatus } from "../../src/lib/api";
+import { getRide, rateRide, updateRideStatus } from "../../src/lib/api";
 import { openDriverSocket, type DriverSocket } from "../../src/lib/ws";
-import { styles } from "../../src/ui";
+import { colors, styles } from "../../src/ui";
 
 /**
  * Aktive Fahrt aus Fahrersicht: Position läuft mit activeRideId weiter an den
@@ -18,6 +18,7 @@ export default function DriverRideScreen() {
   const [status, setStatus] = useState<RideStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [rated, setRated] = useState(false);
   const socketRef = useRef<DriverSocket | null>(null);
   const watcherRef = useRef<Location.LocationSubscription | null>(null);
 
@@ -31,7 +32,13 @@ export default function DriverRideScreen() {
       setRide(loaded);
       setStatus(loaded.status);
 
-      const socket = await openDriverSocket(() => {});
+      const socket = await openDriverSocket((message) => {
+        // Fahrgast hat storniert → Fahrt beenden, Fahrer informieren
+        if (message.type === "rideCancelled" && message.rideId === rideId) {
+          setStatus("CANCELLED");
+          watcherRef.current?.remove();
+        }
+      });
       socketRef.current = socket;
       watcherRef.current = await Location.watchPositionAsync(
         {
@@ -90,8 +97,17 @@ export default function DriverRideScreen() {
   return (
     <View style={[styles.screen, { justifyContent: "flex-start" }]}>
       <Text style={styles.title}>
-        {status === "COMPLETED" ? "Fahrt abgeschlossen" : "Aktive Fahrt"}
+        {status === "COMPLETED"
+          ? "Fahrt abgeschlossen"
+          : status === "CANCELLED"
+            ? "Fahrt storniert"
+            : "Aktive Fahrt"}
       </Text>
+      {status === "CANCELLED" ? (
+        <Text style={styles.errorText}>
+          Der Fahrgast hat die Fahrt storniert. Du kannst wieder online gehen.
+        </Text>
+      ) : null}
       <Text style={styles.subtitle}>
         Abholung: {ride.pickupAddress}
         {"\n"}Ziel: {ride.dropoffAddress}
@@ -122,7 +138,26 @@ export default function DriverRideScreen() {
         </Pressable>
       ) : null}
 
-      {status === "COMPLETED" ? (
+      {status === "COMPLETED" && !rated ? (
+        <View style={{ gap: 6 }}>
+          <Text style={styles.subtitle}>Wie war der Fahrgast?</Text>
+          <View style={{ flexDirection: "row", gap: 8, justifyContent: "center" }}>
+            {[1, 2, 3, 4, 5].map((stars) => (
+              <Pressable
+                key={stars}
+                onPress={() =>
+                  rideId ? rateRide(rideId, stars).finally(() => setRated(true)) : null
+                }
+              >
+                <Text style={{ fontSize: 30 }}>⭐</Text>
+                <Text style={{ textAlign: "center", color: colors.muted }}>{stars}</Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      ) : null}
+
+      {status === "COMPLETED" || status === "CANCELLED" ? (
         <Pressable style={styles.button} onPress={() => router.replace("/home")}>
           <Text style={styles.buttonText}>Zurück – wieder online gehen</Text>
         </Pressable>

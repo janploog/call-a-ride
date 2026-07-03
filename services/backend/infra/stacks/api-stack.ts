@@ -153,6 +153,33 @@ export class ApiStack extends Stack {
     props.ridesTable.grantReadWriteData(rideRatingFn);
     props.usersTable.grantReadWriteData(rideRatingFn);
 
+    const rideCancelFn = new NodejsFunction(this, "RideCancelFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "http/rides-cancel.ts"),
+      environment: {
+        ...lambdaDefaults.environment,
+        CONNECTIONS_TABLE: props.connectionsTable.tableName,
+        WS_ENDPOINT: props.wsManagementEndpoint,
+      },
+    });
+    props.ridesTable.grantReadWriteData(rideCancelFn);
+    props.connectionsTable.grantReadWriteData(rideCancelFn);
+    props.webSocketApi.grantManageConnections(rideCancelFn);
+    rideCancelFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["states:StopExecution"],
+        resources: [
+          `arn:aws:states:${this.region}:${this.account}:execution:car-${props.stage}-ride-lifecycle:*`,
+        ],
+      }),
+    );
+    rideCancelFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["events:PutEvents"],
+        resources: [`arn:aws:events:${this.region}:${this.account}:event-bus/default`],
+      }),
+    );
+
     const adminDriversFn = new NodejsFunction(this, "AdminDriversFn", {
       ...lambdaDefaults,
       entry: path.join(functionsDir, "admin/drivers.ts"),
@@ -209,6 +236,7 @@ export class ApiStack extends Stack {
       { path: "/drivers/me", method: apigwv2.HttpMethod.GET, fn: driversMeFn, name: "DriversMe" },
       { path: "/drivers/documents/upload-url", method: apigwv2.HttpMethod.POST, fn: driverDocumentsFn, name: "DriverDocuments" },
       { path: "/rides/{rideId}/rating", method: apigwv2.HttpMethod.POST, fn: rideRatingFn, name: "RideRating" },
+      { path: "/rides/{rideId}/cancel", method: apigwv2.HttpMethod.POST, fn: rideCancelFn, name: "RideCancel" },
       { path: "/admin/drivers", method: apigwv2.HttpMethod.GET, fn: adminDriversFn, name: "AdminDriversList" },
       { path: "/admin/drivers/{userId}/documents", method: apigwv2.HttpMethod.GET, fn: adminDriversFn, name: "AdminDriverDocs" },
       { path: "/admin/drivers/{userId}/verify", method: apigwv2.HttpMethod.POST, fn: adminDriversFn, name: "AdminDriverVerify" },
