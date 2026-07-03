@@ -49,3 +49,22 @@ export async function updateRideStatus(
     }),
   );
 }
+
+/** Startet das Stripe-Connect-Onboarding und liefert die Onboarding-URL. */
+export async function startStripeOnboarding(): Promise<string> {
+  const data = await expectOk<{ url: string }>(
+    await authFetch("/drivers/stripe-onboarding", { method: "POST" }),
+  );
+  return data.url;
+}
+
+export interface Earnings {
+  todayCents: number;
+  weekCents: number;
+  totalCents: number;
+  completedRides: number;
+}
+
+export async function getEarnings(): Promise<Earnings> {
+  return expectOk(await authFetch("/drivers/me/earnings"));
+}

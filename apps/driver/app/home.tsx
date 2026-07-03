@@ -1,10 +1,10 @@
 import type { ServerMessage } from "@call-a-ride/core";
 import { getCurrentUser, signOut } from "aws-amplify/auth";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
+import { Link, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { Pressable, Switch, Text, View } from "react-native";
-import { respondToOffer } from "../src/lib/api";
+import { Linking, Pressable, Switch, Text, View } from "react-native";
+import { respondToOffer, startStripeOnboarding } from "../src/lib/api";
 import { openDriverSocket, type DriverSocket } from "../src/lib/ws";
 import { colors, styles } from "../src/ui";
 
@@ -84,6 +84,16 @@ export default function DriverHome() {
     }
   }
 
+  async function onStripeOnboarding() {
+    setError(null);
+    try {
+      const url = await startStripeOnboarding();
+      await Linking.openURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Onboarding konnte nicht gestartet werden");
+    }
+  }
+
   async function onSignOut() {
     goOffline();
     await signOut();
@@ -135,6 +145,12 @@ export default function DriverHome() {
         </View>
       ) : null}
 
+      <Link href="/earnings" style={styles.linkText}>
+        Verdienst ansehen
+      </Link>
+      <Pressable onPress={onStripeOnboarding}>
+        <Text style={styles.linkText}>Auszahlungskonto einrichten (Stripe)</Text>
+      </Pressable>
       <Pressable onPress={onSignOut}>
         <Text style={styles.linkText}>Abmelden</Text>
       </Pressable>

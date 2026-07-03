@@ -102,6 +102,13 @@ export default function RideScreen() {
         <Text style={styles.errorText}>Leider wurde kein Fahrer gefunden.</Text>
       ) : null}
 
+      {status === "COMPLETED" ? (
+        <Text style={styles.successText}>
+          Der Fahrpreis wird automatisch von deinem hinterlegten Zahlungsmittel
+          abgebucht. Den Beleg findest du in deiner Fahrthistorie.
+        </Text>
+      ) : null}
+
       {isTerminal ? (
         <Pressable style={styles.button} onPress={() => router.replace("/home")}>
           <Text style={styles.buttonText}>Neue Fahrt planen</Text>

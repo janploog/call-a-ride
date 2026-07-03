@@ -9,4 +9,6 @@ export const config = {
   userPoolClientId: process.env.EXPO_PUBLIC_USER_POOL_CLIENT_ID ?? "",
   /** Style-Descriptor-URL inkl. API-Key (Output des location-Stacks) */
   mapStyleUrl: process.env.EXPO_PUBLIC_MAP_STYLE_URL ?? "",
+  /** Stripe Publishable Key (Testmodus: pk_test_…) */
+  stripePublishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "",
 };

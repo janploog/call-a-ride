@@ -3,6 +3,7 @@ import { AuthStack } from "../stacks/auth-stack";
 import { DataStack } from "../stacks/data-stack";
 import { ApiStack } from "../stacks/api-stack";
 import { LocationStack } from "../stacks/location-stack";
+import { PaymentsStack } from "../stacks/payments-stack";
 import { RealtimeStack } from "../stacks/realtime-stack";
 import { RideFlowStack } from "../stacks/rideflow-stack";
 
@@ -39,6 +40,12 @@ const rideFlow = new RideFlowStack(app, `${prefix}-rideflow`, {
   webSocketApi: realtime.webSocketApi,
   wsManagementEndpoint: realtime.managementEndpoint,
 });
+const payments = new PaymentsStack(app, `${prefix}-payments`, {
+  env,
+  stage,
+  usersTable: data.usersTable,
+  ridesTable: data.ridesTable,
+});
 new ApiStack(app, `${prefix}-api`, {
   env,
   stage,
@@ -50,5 +57,8 @@ new ApiStack(app, `${prefix}-api`, {
   rideStateMachine: rideFlow.stateMachine,
   webSocketApi: realtime.webSocketApi,
   wsManagementEndpoint: realtime.managementEndpoint,
+  setupIntentFn: payments.setupIntentFn,
+  stripeOnboardingFn: payments.onboardingFn,
+  stripeWebhookFn: payments.webhookFn,
 });
 new LocationStack(app, `${prefix}-location`, { env, stage });

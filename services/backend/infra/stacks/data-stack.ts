@@ -31,6 +31,11 @@ export class DataStack extends Stack {
       tableName: `car-${props.stage}-users`,
       partitionKey: { name: "userId", type: dynamodb.AttributeType.STRING },
     });
+    // Für account.updated-Webhooks von Stripe Connect
+    this.usersTable.addGlobalSecondaryIndex({
+      indexName: "byStripeAccount",
+      partitionKey: { name: "stripeAccountId", type: dynamodb.AttributeType.STRING },
+    });
 
     this.ridesTable = new dynamodb.Table(this, "Rides", {
       ...common,

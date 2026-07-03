@@ -5,7 +5,7 @@ import { HttpLambdaIntegration } from "aws-cdk-lib/aws-apigatewayv2-integrations
 import type * as cognito from "aws-cdk-lib/aws-cognito";
 import type * as dynamodb from "aws-cdk-lib/aws-dynamodb";
 import * as iam from "aws-cdk-lib/aws-iam";
-import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { Runtime, type IFunction } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction, type NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import type * as sfn from "aws-cdk-lib/aws-stepfunctions";
@@ -28,6 +28,9 @@ export interface ApiStackProps extends StackProps {
   rideStateMachine: sfn.IStateMachine;
   webSocketApi: apigwv2.WebSocketApi;
   wsManagementEndpoint: string;
+  setupIntentFn: IFunction;
+  stripeOnboardingFn: IFunction;
+  stripeWebhookFn: IFunction;
 }
 
 export class ApiStack extends Stack {
@@ -111,6 +114,19 @@ export class ApiStack extends Stack {
     props.ridesTable.grantReadWriteData(rideStatusFn);
     props.connectionsTable.grantReadWriteData(rideStatusFn);
     props.webSocketApi.grantManageConnections(rideStatusFn);
+    // Statuswechsel emittieren Domain-Events (z. B. Zahlung nach COMPLETED)
+    rideStatusFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["events:PutEvents"],
+        resources: [`arn:aws:events:${this.region}:${this.account}:event-bus/default`],
+      }),
+    );
+
+    const earningsFn = new NodejsFunction(this, "DriverEarningsFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "http/driver-earnings.ts"),
+    });
+    props.ridesTable.grantReadData(earningsFn);
 
     const authorizer = new HttpUserPoolAuthorizer("UserPoolAuthorizer", props.userPool, {
       userPoolClients: [props.userPoolClient],
@@ -134,7 +150,7 @@ export class ApiStack extends Stack {
     const authedRoutes: Array<{
       path: string;
       method: apigwv2.HttpMethod;
-      fn: NodejsFunction;
+      fn: IFunction;
       name: string;
     }> = [
       { path: "/rides", method: apigwv2.HttpMethod.POST, fn: createRideFn, name: "CreateRide" },
@@ -143,6 +159,9 @@ export class ApiStack extends Stack {
       { path: "/places/search", method: apigwv2.HttpMethod.GET, fn: placesSearchFn, name: "PlacesSearch" },
       { path: "/rides/{rideId}/respond", method: apigwv2.HttpMethod.POST, fn: respondRideFn, name: "RespondRide" },
       { path: "/rides/{rideId}/status", method: apigwv2.HttpMethod.POST, fn: rideStatusFn, name: "RideStatus" },
+      { path: "/payments/setup-intent", method: apigwv2.HttpMethod.POST, fn: props.setupIntentFn, name: "SetupIntent" },
+      { path: "/drivers/stripe-onboarding", method: apigwv2.HttpMethod.POST, fn: props.stripeOnboardingFn, name: "StripeOnboarding" },
+      { path: "/drivers/me/earnings", method: apigwv2.HttpMethod.GET, fn: earningsFn, name: "DriverEarnings" },
     ];
     for (const route of authedRoutes) {
       httpApi.addRoutes({
@@ -152,6 +171,13 @@ export class ApiStack extends Stack {
         authorizer,
       });
     }
+
+    // Stripe ruft ohne JWT auf – Sicherheit über Signaturprüfung im Handler
+    httpApi.addRoutes({
+      path: "/webhooks/stripe",
+      methods: [apigwv2.HttpMethod.POST],
+      integration: new HttpLambdaIntegration("StripeWebhookIntegration", props.stripeWebhookFn),
+    });
 
     // Drosselung als Kosten-Schutzschalter (Budget-Leitplanke)
     const defaultStage = httpApi.defaultStage?.node.defaultChild as

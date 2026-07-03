@@ -30,6 +30,13 @@
         {
           "locationWhenInUsePermission": "Call-a-Ride nutzt deinen Standort, um Abholort und Fahrtroute zu bestimmen."
         }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.callaride",
+          "enableGooglePay": true
+        }
       ]
     ]
   }

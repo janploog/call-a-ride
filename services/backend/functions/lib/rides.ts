@@ -1,6 +1,7 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import type { RideStatus } from "@call-a-ride/core";
+import { emitRideEvent } from "./events";
 import { pushToUser } from "./ws-push";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -39,4 +40,5 @@ export async function advanceRideStatus(params: {
   );
 
   await pushToUser(riderId, { type: "rideStatusChanged", rideId, status, driverId });
+  await emitRideEvent("ride.statusChanged", { rideId, riderId, driverId, status });
 }

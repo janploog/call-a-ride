@@ -38,6 +38,20 @@ pnpm exec cdk bootstrap        # einmalig pro Account/Region
 pnpm run deploy:dev
 ```
 
+### Stripe einrichten (Testmodus)
+
+Nach dem ersten Deploy die Test-Keys ins Secret legen und den Webhook anlegen:
+
+```bash
+aws secretsmanager put-secret-value --secret-id car-dev-stripe \
+  --secret-string '{"secretKey":"sk_test_…","webhookSecret":"whsec_…"}'
+# Webhook-Endpoint im Stripe-Dashboard: <HttpApiUrl>/webhooks/stripe
+# Events: payment_intent.succeeded, payment_intent.payment_failed, account.updated
+```
+
+Publishable Key (`pk_test_…`) in `apps/rider/.env` als
+`EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY` eintragen.
+
 ### Rider-App starten
 
 Stack-Outputs (User-Pool-IDs, API-URLs) in `apps/rider/.env` eintragen
@@ -56,17 +70,20 @@ npx expo run:android   # oder run:ios — Dev-Build erforderlich
 
 ## Stand
 
-**Phase 2 (Driver-App & echtes Matching)** gemäß [Roadmap](docs/architecture.md#4-roadmap):
+**Phase 3 (Zahlungen)** gemäß [Roadmap](docs/architecture.md#4-roadmap):
 
-- Fahrer-App: Online-Schalter, Positions-Streaming über WebSocket,
-  Fahrtangebot mit Annehmen/Ablehnen, Fahrt-Screen mit Statuswechseln
-- Echtes Matching in der Statemachine: Geohash-Umkreissuche um den Abholort,
-  Angebot per Callback-Pattern (Task-Token, 30-s-Timeout), bei Ablehnung/
-  Timeout Weiterreichung an den nächsten Fahrer, max. 5 Versuche
-- Live-Tracking: Fahrer-Position wird während der Fahrt an den Fahrgast
-  weitergeleitet und in der Rider-App auf der Karte angezeigt
-- WebSocket-Connect verifiziert jetzt das Cognito-JWT (aws-jwt-verify)
+- Fahrgast hinterlegt eine Karte über die Stripe PaymentSheet (SetupIntent,
+  off-session-fähig); nach Fahrtende bucht ein EventBridge-getriggertes
+  Lambda den Fahrpreis automatisch ab
+- Destination Charge mit Provisions-Split: Plattform-Anteil bleibt,
+  Rest geht an das Stripe-Connect-Konto (Express) des Fahrers
+- Fahrer-Onboarding per Stripe-Link aus der App; account.updated-Webhook
+  pflegt payoutsEnabled; Verdienstübersicht (heute/Woche/gesamt) in der App
+- Stripe-Keys liegen im Secrets Manager, der Webhook prüft Signaturen
 
-Noch offen für Phase 3+: Zahlungen (Stripe Connect), Expo-Push zusätzlich zum
-WebSocket-Kanal, Hintergrund-Standort der Fahrer-App, Stornierung durch den
-Fahrgast, gemeinsames UI-Paket für beide Apps.
+Frühere Phasen: Walking Skeleton (0), Rider-Kernflow mit Location-Routing
+und Ride-Statemachine (1), Driver-App mit echtem Geohash-Matching und
+Live-Tracking (2).
+
+Noch offen für Phase 4+: Fahrer-Verifizierung mit Dokumenten-Upload,
+Admin-Dashboard, Bewertungen, Stornierung, Observability-Alarme.

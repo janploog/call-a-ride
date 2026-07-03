@@ -19,7 +19,8 @@
     "aws-amplify": "^6.15.0",
     "@aws-amplify/react-native": "^1.1.10",
     "expo-location": "~57.0.2",
-    "@maplibre/maplibre-react-native": "^11.3.6"
+    "@maplibre/maplibre-react-native": "^11.3.6",
+    "@stripe/stripe-react-native": "0.64.0"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",

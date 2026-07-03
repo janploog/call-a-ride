@@ -54,3 +54,14 @@ export async function createRide(request: RideRequest): Promise<Ride> {
 export async function getRide(rideId: string): Promise<Ride> {
   return expectOk(await authFetch(`/rides/${rideId}`));
 }
+
+export interface SetupIntentResponse {
+  customerId: string;
+  ephemeralKeySecret: string;
+  setupIntentClientSecret: string;
+}
+
+/** Bereitet die Stripe PaymentSheet zum Hinterlegen einer Karte vor. */
+export async function createSetupIntent(): Promise<SetupIntentResponse> {
+  return expectOk(await authFetch("/payments/setup-intent", { method: "POST" }));
+}

@@ -12,6 +12,7 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { Link } from "expo-router";
 import { RideMap } from "../src/components/RideMap";
 import { createRide, getQuote, searchPlaces } from "../src/lib/api";
 import { styles } from "../src/ui";
@@ -143,6 +144,9 @@ export default function Home() {
         </View>
       ) : null}
 
+      <Link href="/payment-setup" style={styles.linkText}>
+        Zahlungsmittel verwalten
+      </Link>
       <Pressable onPress={onSignOut}>
         <Text style={styles.linkText}>Abmelden</Text>
       </Pressable>

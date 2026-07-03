@@ -1,6 +1,7 @@
 import { CfnOutput, Duration, Stack, type StackProps } from "aws-cdk-lib";
 import type * as apigwv2 from "aws-cdk-lib/aws-apigatewayv2";
 import type * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as iam from "aws-cdk-lib/aws-iam";
 import { Runtime } from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction, type NodejsFunctionProps } from "aws-cdk-lib/aws-lambda-nodejs";
 import { RetentionDays } from "aws-cdk-lib/aws-logs";
@@ -73,6 +74,12 @@ export class RideFlowStack extends Stack {
     props.ridesTable.grantWriteData(advanceFn);
     props.connectionsTable.grantReadWriteData(advanceFn);
     props.webSocketApi.grantManageConnections(advanceFn);
+    advanceFn.addToRolePolicy(
+      new iam.PolicyStatement({
+        actions: ["events:PutEvents"],
+        resources: [`arn:aws:events:${this.region}:${this.account}:event-bus/default`],
+      }),
+    );
     props.ridesTable.grantReadData(findCandidatesFn);
     props.driverLocationsTable.grantReadData(findCandidatesFn);
     props.ridesTable.grantReadWriteData(offerRideFn);
