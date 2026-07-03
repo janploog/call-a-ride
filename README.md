@@ -9,7 +9,8 @@ freien Fahrern, Start lokal in einer Stadt.
 
 | Pfad | Inhalt |
 |---|---|
-| `apps/rider` | Fahrgast-App (Expo / React Native, expo-router, Amplify-Auth) |
+| `apps/rider` | Fahrgast-App (Expo / React Native, expo-router, Amplify-Auth, MapLibre) |
+| `apps/driver` | Fahrer-App (Online-Status, Fahrtangebote, Positions-Streaming) |
 | `packages/core` | Geteilte Domain-Logik: Zod-Schemas, Preisberechnung, Geohash (pure TS, getestet) |
 | `services/backend` | Lambda-Handler (TypeScript) + AWS-CDK-Infrastruktur |
 
@@ -55,14 +56,17 @@ npx expo run:android   # oder run:ios — Dev-Build erforderlich
 
 ## Stand
 
-**Phase 1 (Rider-Kernflow)** gemäß [Roadmap](docs/architecture.md#4-roadmap):
+**Phase 2 (Driver-App & echtes Matching)** gemäß [Roadmap](docs/architecture.md#4-roadmap):
 
-- Adresssuche und Routing über Amazon Location (v2-APIs, per Lambda-Proxy)
-- Preisschätzung vor Buchung (`GET /route`), Fahrt anlegen (`POST /rides`)
-- Ride-Lifecycle als Step-Functions-Statemachine — in Phase 1 nimmt ein
-  simulierter Fahrer an und die Fahrt durchläuft alle Status bis COMPLETED
-- Live-Status-Updates per WebSocket-Push in die App (Fahrt-Screen mit Timeline)
-- Karte mit MapLibre + Amazon-Location-Tiles im Buchungs-Screen
+- Fahrer-App: Online-Schalter, Positions-Streaming über WebSocket,
+  Fahrtangebot mit Annehmen/Ablehnen, Fahrt-Screen mit Statuswechseln
+- Echtes Matching in der Statemachine: Geohash-Umkreissuche um den Abholort,
+  Angebot per Callback-Pattern (Task-Token, 30-s-Timeout), bei Ablehnung/
+  Timeout Weiterreichung an den nächsten Fahrer, max. 5 Versuche
+- Live-Tracking: Fahrer-Position wird während der Fahrt an den Fahrgast
+  weitergeleitet und in der Rider-App auf der Karte angezeigt
+- WebSocket-Connect verifiziert jetzt das Cognito-JWT (aws-jwt-verify)
 
-Noch offen aus Phase 1→2: JWT-Verifikation beim WebSocket-Connect, echtes
-Fahrer-Matching statt Simulation.
+Noch offen für Phase 3+: Zahlungen (Stripe Connect), Expo-Push zusätzlich zum
+WebSocket-Kanal, Hintergrund-Standort der Fahrer-App, Stornierung durch den
+Fahrgast, gemeinsames UI-Paket für beide Apps.

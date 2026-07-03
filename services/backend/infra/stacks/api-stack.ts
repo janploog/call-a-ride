@@ -24,7 +24,10 @@ export interface ApiStackProps extends StackProps {
   userPoolClient: cognito.IUserPoolClient;
   ridesTable: dynamodb.ITable;
   configTable: dynamodb.ITable;
+  connectionsTable: dynamodb.ITable;
   rideStateMachine: sfn.IStateMachine;
+  webSocketApi: apigwv2.WebSocketApi;
+  wsManagementEndpoint: string;
 }
 
 export class ApiStack extends Stack {
@@ -89,6 +92,26 @@ export class ApiStack extends Stack {
     });
     placesSearchFn.addToRolePolicy(geoPlacesPolicy);
 
+    const respondRideFn = new NodejsFunction(this, "RespondRideFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "http/rides-respond.ts"),
+    });
+    props.ridesTable.grantReadWriteData(respondRideFn);
+    props.rideStateMachine.grantTaskResponse(respondRideFn);
+
+    const rideStatusFn = new NodejsFunction(this, "RideStatusFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "http/rides-status.ts"),
+      environment: {
+        ...lambdaDefaults.environment,
+        CONNECTIONS_TABLE: props.connectionsTable.tableName,
+        WS_ENDPOINT: props.wsManagementEndpoint,
+      },
+    });
+    props.ridesTable.grantReadWriteData(rideStatusFn);
+    props.connectionsTable.grantReadWriteData(rideStatusFn);
+    props.webSocketApi.grantManageConnections(rideStatusFn);
+
     const authorizer = new HttpUserPoolAuthorizer("UserPoolAuthorizer", props.userPool, {
       userPoolClients: [props.userPoolClient],
     });
@@ -118,6 +141,8 @@ export class ApiStack extends Stack {
       { path: "/rides/{rideId}", method: apigwv2.HttpMethod.GET, fn: getRideFn, name: "GetRide" },
       { path: "/route", method: apigwv2.HttpMethod.GET, fn: routeQuoteFn, name: "RouteQuote" },
       { path: "/places/search", method: apigwv2.HttpMethod.GET, fn: placesSearchFn, name: "PlacesSearch" },
+      { path: "/rides/{rideId}/respond", method: apigwv2.HttpMethod.POST, fn: respondRideFn, name: "RespondRide" },
+      { path: "/rides/{rideId}/status", method: apigwv2.HttpMethod.POST, fn: rideStatusFn, name: "RideStatus" },
     ];
     for (const route of authedRoutes) {
       httpApi.addRoutes({

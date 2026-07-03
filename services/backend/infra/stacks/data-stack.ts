@@ -60,6 +60,11 @@ export class DataStack extends Stack {
       sortKey: { name: "driverId", type: dynamodb.AttributeType.STRING },
       timeToLiveAttribute: "expiresAt",
     });
+    // Zum Aufräumen alter Zelleinträge nach einem Geohash-Wechsel
+    this.driverLocationsTable.addGlobalSecondaryIndex({
+      indexName: "byDriver",
+      partitionKey: { name: "driverId", type: dynamodb.AttributeType.STRING },
+    });
 
     this.connectionsTable = new dynamodb.Table(this, "Connections", {
       ...common,

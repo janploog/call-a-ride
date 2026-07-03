@@ -1,7 +1,8 @@
-import type { Ride, RideStatus } from "@call-a-ride/core";
+import type { Coordinate, Ride, RideStatus } from "@call-a-ride/core";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useState } from "react";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { RideMap } from "../../src/components/RideMap";
 import { getRide } from "../../src/lib/api";
 import { openUserSocket } from "../../src/lib/ws";
 import { colors, styles } from "../../src/ui";
@@ -20,6 +21,7 @@ export default function RideScreen() {
   const { rideId } = useLocalSearchParams<{ rideId: string }>();
   const [ride, setRide] = useState<Ride | null>(null);
   const [status, setStatus] = useState<RideStatus | null>(null);
+  const [driverPosition, setDriverPosition] = useState<Coordinate | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -33,6 +35,9 @@ export default function RideScreen() {
       close = await openUserSocket((message) => {
         if (message.type === "rideStatusChanged" && message.rideId === rideId) {
           setStatus(message.status);
+        }
+        if (message.type === "driverPosition" && message.rideId === rideId) {
+          setDriverPosition(message.position);
         }
       });
       const loaded = await getRide(rideId);
@@ -70,6 +75,7 @@ export default function RideScreen() {
 
   return (
     <View style={[styles.screen, { justifyContent: "flex-start" }]}>
+      <RideMap pickup={ride.pickup} dropoff={ride.dropoff} driver={driverPosition} />
       <Text style={styles.title}>Deine Fahrt</Text>
       <Text style={styles.subtitle}>
         {ride.pickupAddress} → {ride.dropoffAddress}

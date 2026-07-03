@@ -25,12 +25,17 @@ const realtime = new RealtimeStack(app, `${prefix}-realtime`, {
   env,
   stage,
   connectionsTable: data.connectionsTable,
+  driverLocationsTable: data.driverLocationsTable,
+  ridesTable: data.ridesTable,
+  userPool: auth.userPool,
+  userPoolClient: auth.userPoolClient,
 });
 const rideFlow = new RideFlowStack(app, `${prefix}-rideflow`, {
   env,
   stage,
   ridesTable: data.ridesTable,
   connectionsTable: data.connectionsTable,
+  driverLocationsTable: data.driverLocationsTable,
   webSocketApi: realtime.webSocketApi,
   wsManagementEndpoint: realtime.managementEndpoint,
 });
@@ -41,6 +46,9 @@ new ApiStack(app, `${prefix}-api`, {
   userPoolClient: auth.userPoolClient,
   ridesTable: data.ridesTable,
   configTable: data.configTable,
+  connectionsTable: data.connectionsTable,
   rideStateMachine: rideFlow.stateMachine,
+  webSocketApi: realtime.webSocketApi,
+  wsManagementEndpoint: realtime.managementEndpoint,
 });
 new LocationStack(app, `${prefix}-location`, { env, stage });

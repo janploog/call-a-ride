@@ -1,0 +1,35 @@
+{
+  "expo": {
+    "name": "Call-a-Ride Fahrer",
+    "slug": "call-a-ride-driver",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "callaridedriver",
+    "ios": {
+      "supportsTablet": false
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Call-a-Ride Fahrer übermittelt deine Position, damit dir passende Fahrten zugewiesen werden und Fahrgäste deine Anfahrt verfolgen können."
+        }
+      ]
+    ]
+  }
+}

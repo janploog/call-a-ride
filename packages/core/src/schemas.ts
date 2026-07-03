@@ -60,10 +60,17 @@ export const routeQuoteSchema = z.object({
 });
 export type RouteQuote = z.infer<typeof routeQuoteSchema>;
 
+/**
+ * Client→Server über WebSocket: periodisches Positions-Update der Fahrer-App.
+ * `available: false` (z. B. während einer Fahrt) nimmt den Fahrer aus dem
+ * Matching; `activeRideId` leitet die Position live an den Fahrgast weiter.
+ */
 export const driverLocationUpdateSchema = z.object({
   action: z.literal("locationUpdate"),
   position: coordinateSchema,
   headingDegrees: z.number().min(0).max(360).optional(),
+  available: z.boolean(),
+  activeRideId: z.string().optional(),
 });
 export type DriverLocationUpdate = z.infer<typeof driverLocationUpdateSchema>;
 
@@ -80,6 +87,17 @@ export const serverMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("driverPosition"),
     rideId: z.string(),
     position: coordinateSchema,
+  }),
+  z.object({
+    type: z.literal("rideOffer"),
+    rideId: z.string(),
+    pickup: coordinateSchema,
+    dropoff: coordinateSchema,
+    pickupAddress: z.string(),
+    dropoffAddress: z.string(),
+    estimatedFareCents: z.number().int().nonnegative(),
+    distanceMeters: z.number().nonnegative(),
+    expiresInSeconds: z.number().int().positive(),
   }),
 ]);
 export type ServerMessage = z.infer<typeof serverMessageSchema>;

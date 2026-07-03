@@ -9,10 +9,11 @@ import { config } from "../config";
 export async function openUserSocket(
   onMessage: (message: ServerMessage) => void,
 ): Promise<() => void> {
-  const { userSub } = await fetchAuthSession();
-  if (!userSub) throw new Error("Keine gültige Sitzung");
+  const session = await fetchAuthSession();
+  const token = session.tokens?.idToken?.toString();
+  if (!token) throw new Error("Keine gültige Sitzung");
 
-  const ws = new WebSocket(`${config.wsUrl}?userId=${userSub}`);
+  const ws = new WebSocket(`${config.wsUrl}?token=${encodeURIComponent(token)}`);
   ws.onmessage = (event) => {
     try {
       const parsed = serverMessageSchema.safeParse(JSON.parse(String(event.data)));

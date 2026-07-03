@@ -7,13 +7,15 @@ import { colors } from "../ui";
 interface RideMapProps {
   pickup: Coordinate;
   dropoff?: Coordinate | null;
+  /** Live-Position des Fahrers während einer Fahrt */
+  driver?: Coordinate | null;
 }
 
 /**
  * Karte mit Amazon-Location-Tiles (MapLibre). Benötigt einen Dev-Build
  * (`npx expo run:ios|android`) — in Expo Go ist das native Modul nicht enthalten.
  */
-export function RideMap({ pickup, dropoff }: RideMapProps) {
+export function RideMap({ pickup, dropoff, driver }: RideMapProps) {
   if (!config.mapStyleUrl) {
     return (
       <View style={[mapStyles.map, mapStyles.placeholder]}>
@@ -43,6 +45,11 @@ export function RideMap({ pickup, dropoff }: RideMapProps) {
           <View style={[mapStyles.marker, { backgroundColor: colors.success }]} />
         </Marker>
       ) : null}
+      {driver ? (
+        <Marker id="driver" lngLat={[driver.lon, driver.lat]}>
+          <View style={[mapStyles.marker, mapStyles.driverMarker]} />
+        </Marker>
+      ) : null}
     </MapLibreMap>
   );
 }
@@ -69,5 +76,11 @@ const mapStyles = StyleSheet.create({
     borderRadius: 9,
     borderWidth: 3,
     borderColor: "#ffffff",
+  },
+  driverMarker: {
+    backgroundColor: "#2563eb",
+    width: 22,
+    height: 22,
+    borderRadius: 11,
   },
 });
