@@ -43,6 +43,23 @@ export const rideSchema = z.object({
 });
 export type Ride = z.infer<typeof rideSchema>;
 
+/** Ergebnis der Adresssuche (GET /places/search). */
+export const placeResultSchema = z.object({
+  label: z.string(),
+  position: coordinateSchema,
+});
+export type PlaceResult = z.infer<typeof placeResultSchema>;
+
+/** Routen-/Preisschätzung vor der Buchung (GET /route). */
+export const routeQuoteSchema = z.object({
+  distanceMeters: z.number().nonnegative(),
+  durationSeconds: z.number().nonnegative(),
+  estimatedFareCents: z.number().int().nonnegative(),
+  /** true, wenn statt echter Route die Luftlinien-Näherung verwendet wurde */
+  approximate: z.boolean(),
+});
+export type RouteQuote = z.infer<typeof routeQuoteSchema>;
+
 export const driverLocationUpdateSchema = z.object({
   action: z.literal("locationUpdate"),
   position: coordinateSchema,
@@ -57,6 +74,7 @@ export const serverMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("rideStatusChanged"),
     rideId: z.string(),
     status: rideStatusSchema,
+    driverId: z.string().optional(),
   }),
   z.object({
     type: z.literal("driverPosition"),

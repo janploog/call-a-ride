@@ -7,4 +7,6 @@ export const config = {
   wsUrl: process.env.EXPO_PUBLIC_WS_URL ?? "",
   userPoolId: process.env.EXPO_PUBLIC_USER_POOL_ID ?? "",
   userPoolClientId: process.env.EXPO_PUBLIC_USER_POOL_CLIENT_ID ?? "",
+  /** Style-Descriptor-URL inkl. API-Key (Output des location-Stacks) */
+  mapStyleUrl: process.env.EXPO_PUBLIC_MAP_STYLE_URL ?? "",
 };

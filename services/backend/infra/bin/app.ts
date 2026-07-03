@@ -2,7 +2,9 @@ import { App } from "aws-cdk-lib";
 import { AuthStack } from "../stacks/auth-stack";
 import { DataStack } from "../stacks/data-stack";
 import { ApiStack } from "../stacks/api-stack";
+import { LocationStack } from "../stacks/location-stack";
 import { RealtimeStack } from "../stacks/realtime-stack";
+import { RideFlowStack } from "../stacks/rideflow-stack";
 
 const app = new App();
 
@@ -19,6 +21,19 @@ const prefix = `car-${stage}`;
 
 const auth = new AuthStack(app, `${prefix}-auth`, { env, stage });
 const data = new DataStack(app, `${prefix}-data`, { env, stage });
+const realtime = new RealtimeStack(app, `${prefix}-realtime`, {
+  env,
+  stage,
+  connectionsTable: data.connectionsTable,
+});
+const rideFlow = new RideFlowStack(app, `${prefix}-rideflow`, {
+  env,
+  stage,
+  ridesTable: data.ridesTable,
+  connectionsTable: data.connectionsTable,
+  webSocketApi: realtime.webSocketApi,
+  wsManagementEndpoint: realtime.managementEndpoint,
+});
 new ApiStack(app, `${prefix}-api`, {
   env,
   stage,
@@ -26,9 +41,6 @@ new ApiStack(app, `${prefix}-api`, {
   userPoolClient: auth.userPoolClient,
   ridesTable: data.ridesTable,
   configTable: data.configTable,
+  rideStateMachine: rideFlow.stateMachine,
 });
-new RealtimeStack(app, `${prefix}-realtime`, {
-  env,
-  stage,
-  connectionsTable: data.connectionsTable,
-});
+new LocationStack(app, `${prefix}-location`, { env, stage });

@@ -20,6 +20,7 @@ export default function RootLayout() {
         <Stack.Screen name="sign-up" options={{ title: "Registrieren" }} />
         <Stack.Screen name="confirm" options={{ title: "E-Mail bestätigen" }} />
         <Stack.Screen name="home" options={{ title: "Call-a-Ride" }} />
+        <Stack.Screen name="ride/[rideId]" options={{ title: "Fahrt" }} />
       </Stack>
     </>
   );

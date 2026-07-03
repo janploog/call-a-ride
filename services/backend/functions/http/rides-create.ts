@@ -1,20 +1,13 @@
 import type { APIGatewayProxyHandlerV2WithJWTAuthorizer } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
 import { randomUUID } from "node:crypto";
-import {
-  estimateFareCents,
-  haversineDistanceMeters,
-  rideRequestSchema,
-  type Ride,
-} from "@call-a-ride/core";
+import { estimateFareCents, rideRequestSchema, type Ride } from "@call-a-ride/core";
+import { calculateRoute } from "../lib/routing";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
-
-// Bis zur Location-Service-Integration (Phase 1): Luftlinie × Umwegfaktor,
-// Fahrzeit über eine mittlere Stadtgeschwindigkeit angenähert.
-const ROUTE_DETOUR_FACTOR = 1.3;
-const AVG_CITY_SPEED_KMH = 25;
+const sfn = new SFNClient({});
 
 export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) => {
   const riderId = event.requestContext.authorizer.jwt.claims.sub;
@@ -28,13 +21,10 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
   }
   const request = parsed.data;
 
-  const distanceMeters = Math.round(
-    haversineDistanceMeters(request.pickup, request.dropoff) * ROUTE_DETOUR_FACTOR,
-  );
-  if (distanceMeters < 100) {
+  const route = await calculateRoute(request.pickup, request.dropoff);
+  if (route.distanceMeters < 100) {
     return json(400, { error: "pickup_and_dropoff_too_close" });
   }
-  const durationSeconds = Math.round((distanceMeters / 1000 / AVG_CITY_SPEED_KMH) * 3600);
 
   const now = new Date().toISOString();
   const ride: Ride = {
@@ -45,9 +35,9 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
     dropoff: request.dropoff,
     pickupAddress: request.pickupAddress,
     dropoffAddress: request.dropoffAddress,
-    estimatedFareCents: estimateFareCents(distanceMeters, durationSeconds),
-    distanceMeters,
-    durationSeconds,
+    estimatedFareCents: estimateFareCents(route.distanceMeters, route.durationSeconds),
+    distanceMeters: route.distanceMeters,
+    durationSeconds: route.durationSeconds,
     createdAt: now,
     updatedAt: now,
   };
@@ -57,6 +47,14 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
       TableName: process.env.RIDES_TABLE,
       Item: ride,
       ConditionExpression: "attribute_not_exists(rideId)",
+    }),
+  );
+
+  await sfn.send(
+    new StartExecutionCommand({
+      stateMachineArn: process.env.RIDE_STATE_MACHINE_ARN,
+      name: ride.rideId,
+      input: JSON.stringify({ rideId: ride.rideId, riderId: ride.riderId }),
     }),
   );
 

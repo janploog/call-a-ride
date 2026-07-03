@@ -23,7 +23,14 @@
     },
     "scheme": "callaride",
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "@maplibre/maplibre-react-native",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Call-a-Ride nutzt deinen Standort, um Abholort und Fahrtroute zu bestimmen."
+        }
+      ]
     ]
   }
 }

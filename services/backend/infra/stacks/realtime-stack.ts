@@ -20,6 +20,10 @@ export interface RealtimeStackProps extends StackProps {
 }
 
 export class RealtimeStack extends Stack {
+  readonly webSocketApi: apigwv2.WebSocketApi;
+  /** HTTPS-Endpoint der Management-API zum Senden an verbundene Clients. */
+  readonly managementEndpoint: string;
+
   constructor(scope: Construct, id: string, props: RealtimeStackProps) {
     super(scope, id, props);
 
@@ -53,7 +57,7 @@ export class RealtimeStack extends Stack {
     props.connectionsTable.grantWriteData(disconnectFn);
     props.connectionsTable.grantReadData(defaultFn);
 
-    const wsApi = new apigwv2.WebSocketApi(this, "WsApi", {
+    this.webSocketApi = new apigwv2.WebSocketApi(this, "WsApi", {
       apiName: `car-${props.stage}-ws`,
       connectRouteOptions: {
         integration: new WebSocketLambdaIntegration("ConnectIntegration", connectFn),
@@ -70,12 +74,13 @@ export class RealtimeStack extends Stack {
     });
 
     const wsStage = new apigwv2.WebSocketStage(this, "WsStage", {
-      webSocketApi: wsApi,
+      webSocketApi: this.webSocketApi,
       stageName: props.stage,
       autoDeploy: true,
     });
 
-    wsApi.grantManageConnections(defaultFn);
+    this.webSocketApi.grantManageConnections(defaultFn);
+    this.managementEndpoint = `https://${this.webSocketApi.apiId}.execute-api.${this.region}.amazonaws.com/${props.stage}`;
 
     new CfnOutput(this, "WebSocketUrl", { value: wsStage.url });
   }

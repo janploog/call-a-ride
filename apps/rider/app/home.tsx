@@ -1,60 +1,92 @@
-import { estimateFareCents } from "@call-a-ride/core";
-import { fetchAuthSession, getCurrentUser, signOut } from "aws-amplify/auth";
+import type { Coordinate, PlaceResult, RouteQuote } from "@call-a-ride/core";
+import { getCurrentUser, signOut } from "aws-amplify/auth";
+import * as Location from "expo-location";
 import { useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
-import { Pressable, Text, View } from "react-native";
-import { config } from "../src/config";
+import { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  Keyboard,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { RideMap } from "../src/components/RideMap";
+import { createRide, getQuote, searchPlaces } from "../src/lib/api";
 import { styles } from "../src/ui";
 
-/**
- * Walking-Skeleton-Screen: beweist alle Pfade des Durchstichs —
- * Login-Session (Cognito), REST-API (health), WebSocket-Echo und die
- * geteilte Preislogik aus @call-a-ride/core.
- */
+// Fallback, solange keine Standortfreigabe vorliegt (Berlin Mitte)
+const FALLBACK_PICKUP: Coordinate = { lat: 52.520008, lon: 13.404954 };
+
 export default function Home() {
   const router = useRouter();
-  const [userEmail, setUserEmail] = useState<string | null>(null);
-  const [healthResult, setHealthResult] = useState<string | null>(null);
-  const [echoResult, setEchoResult] = useState<string | null>(null);
-  const wsRef = useRef<WebSocket | null>(null);
-
-  // Beispiel: 5 km, 12 min — gerechnet mit derselben Logik wie im Backend
-  const exampleFare = (estimateFareCents(5000, 720) / 100).toFixed(2);
+  const [pickup, setPickup] = useState<Coordinate>(FALLBACK_PICKUP);
+  const [pickupLabel, setPickupLabel] = useState("Aktueller Standort");
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<PlaceResult[]>([]);
+  const [destination, setDestination] = useState<PlaceResult | null>(null);
+  const [quote, setQuote] = useState<RouteQuote | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    getCurrentUser()
-      .then((u) => setUserEmail(u.signInDetails?.loginId ?? u.username))
-      .catch(() => router.replace("/sign-in"));
-    return () => wsRef.current?.close();
+    getCurrentUser().catch(() => router.replace("/sign-in"));
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status === "granted") {
+        const pos = await Location.getCurrentPositionAsync({});
+        setPickup({ lat: pos.coords.latitude, lon: pos.coords.longitude });
+      } else {
+        setPickupLabel("Standort nicht freigegeben (Beispiel: Berlin Mitte)");
+      }
+    })().catch(() => setPickupLabel("Standort nicht verfügbar"));
   }, [router]);
 
-  async function onHealthCheck() {
-    setHealthResult("…");
+  async function onSearch() {
+    Keyboard.dismiss();
+    setError(null);
+    setBusy(true);
     try {
-      const res = await fetch(`${config.apiUrl}/health`);
-      setHealthResult(`${res.status}: ${await res.text()}`);
+      setResults(await searchPlaces(query, pickup));
     } catch (e) {
-      setHealthResult(e instanceof Error ? e.message : "Fehler");
+      setError(e instanceof Error ? e.message : "Suche fehlgeschlagen");
+    } finally {
+      setBusy(false);
     }
   }
 
-  async function onEchoTest() {
-    setEchoResult("verbinde…");
+  async function onSelectDestination(place: PlaceResult) {
+    setDestination(place);
+    setResults([]);
+    setQuote(null);
+    setError(null);
+    setBusy(true);
     try {
-      const { userSub } = await fetchAuthSession();
-      const ws = new WebSocket(`${config.wsUrl}?userId=${userSub ?? "unknown"}`);
-      wsRef.current = ws;
-      ws.onopen = () => {
-        setEchoResult("verbunden, sende…");
-        ws.send(JSON.stringify({ hello: "call-a-ride" }));
-      };
-      ws.onmessage = (event) => {
-        setEchoResult(`Echo: ${String(event.data)}`);
-        ws.close();
-      };
-      ws.onerror = () => setEchoResult("WebSocket-Fehler");
+      setQuote(await getQuote(pickup, place.position));
     } catch (e) {
-      setEchoResult(e instanceof Error ? e.message : "Fehler");
+      setError(e instanceof Error ? e.message : "Preisschätzung fehlgeschlagen");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onRequestRide() {
+    if (!destination) return;
+    setError(null);
+    setBusy(true);
+    try {
+      const ride = await createRide({
+        pickup,
+        dropoff: destination.position,
+        pickupAddress: pickupLabel,
+        dropoffAddress: destination.label,
+      });
+      router.push({ pathname: "/ride/[rideId]", params: { rideId: ride.rideId } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Fahrt konnte nicht angefragt werden");
+    } finally {
+      setBusy(false);
     }
   }
 
@@ -64,24 +96,52 @@ export default function Home() {
   }
 
   return (
-    <View style={styles.screen}>
-      <Text style={styles.title}>Hallo!</Text>
-      <Text style={styles.subtitle}>Angemeldet als {userEmail ?? "…"}</Text>
+    <View style={[styles.screen, { justifyContent: "flex-start" }]}>
+      <RideMap pickup={pickup} dropoff={destination?.position} />
 
-      <Text style={styles.subtitle}>
-        Beispiel-Preisschätzung (5 km, 12 min): {exampleFare} € — berechnet mit der
-        geteilten Preislogik aus @call-a-ride/core.
-      </Text>
+      <Text style={styles.subtitle}>Abholung: {pickupLabel}</Text>
 
-      <Pressable style={styles.button} onPress={onHealthCheck}>
-        <Text style={styles.buttonText}>API-Health testen</Text>
+      <TextInput
+        style={styles.input}
+        placeholder="Wohin möchtest du?"
+        value={query}
+        onChangeText={setQuery}
+        onSubmitEditing={onSearch}
+        returnKeyType="search"
+      />
+      <Pressable style={styles.button} onPress={onSearch} disabled={busy || query.length < 2}>
+        <Text style={styles.buttonText}>Ziel suchen</Text>
       </Pressable>
-      {healthResult ? <Text style={styles.successText}>{healthResult}</Text> : null}
 
-      <Pressable style={styles.button} onPress={onEchoTest}>
-        <Text style={styles.buttonText}>WebSocket-Echo testen</Text>
-      </Pressable>
-      {echoResult ? <Text style={styles.successText}>{echoResult}</Text> : null}
+      {busy ? <ActivityIndicator /> : null}
+      {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      <FlatList
+        data={results}
+        keyExtractor={(item) => `${item.position.lat},${item.position.lon}`}
+        renderItem={({ item }) => (
+          <Pressable onPress={() => onSelectDestination(item)}>
+            <Text style={[styles.subtitle, { marginBottom: 8 }]}>📍 {item.label}</Text>
+          </Pressable>
+        )}
+      />
+
+      {destination && quote ? (
+        <View>
+          <Text style={styles.subtitle}>
+            Nach: {destination.label}
+            {"\n"}
+            {(quote.distanceMeters / 1000).toFixed(1)} km ·{" "}
+            {Math.round(quote.durationSeconds / 60)} min
+            {quote.approximate ? " (grobe Schätzung)" : ""}
+          </Text>
+          <Pressable style={styles.button} onPress={onRequestRide} disabled={busy}>
+            <Text style={styles.buttonText}>
+              Fahrt anfordern · {(quote.estimatedFareCents / 100).toFixed(2)} €
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
       <Pressable onPress={onSignOut}>
         <Text style={styles.linkText}>Abmelden</Text>

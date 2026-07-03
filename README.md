@@ -14,7 +14,9 @@ freien Fahrern, Start lokal in einer Stadt.
 | `services/backend` | Lambda-Handler (TypeScript) + AWS-CDK-Infrastruktur |
 
 CDK-Stacks (`car-<stage>-…`): **auth** (Cognito), **data** (DynamoDB), **api**
-(HTTP API + Lambda), **realtime** (WebSocket API). Region: `eu-central-1`.
+(HTTP API + Lambda), **realtime** (WebSocket API), **rideflow** (Step-Functions-
+Statemachine für den Fahrt-Lebenszyklus), **location** (API-Key für Karten-Tiles).
+Region: `eu-central-1`.
 
 ## Entwicklung
 
@@ -42,11 +44,25 @@ Stack-Outputs (User-Pool-IDs, API-URLs) in `apps/rider/.env` eintragen
 
 ```bash
 cd apps/rider
-pnpm start         # Expo Dev Server; QR-Code mit Expo Go scannen
+npx expo run:android   # oder run:ios — Dev-Build erforderlich
 ```
+
+> **Hinweis:** Seit Phase 1 enthält die App das native MapLibre-Modul für die
+> Amazon-Location-Karte — **Expo Go reicht nicht mehr**, es braucht einen
+> Dev-Build (`npx expo run:android|ios` lokal oder EAS Build).
+> Der Karten-API-Key kommt aus dem location-Stack:
+> `aws location describe-key --key-name car-dev-maps --query Key --output text`
 
 ## Stand
 
-Phase 0 („Walking Skeleton") gemäß [Roadmap](docs/architecture.md#4-roadmap):
-Monorepo, CDK-Grundstack, Registrierung/Login gegen Cognito, `POST /rides` mit
-geteilter Preislogik, WebSocket-Echo als Beweis des Rückkanals.
+**Phase 1 (Rider-Kernflow)** gemäß [Roadmap](docs/architecture.md#4-roadmap):
+
+- Adresssuche und Routing über Amazon Location (v2-APIs, per Lambda-Proxy)
+- Preisschätzung vor Buchung (`GET /route`), Fahrt anlegen (`POST /rides`)
+- Ride-Lifecycle als Step-Functions-Statemachine — in Phase 1 nimmt ein
+  simulierter Fahrer an und die Fahrt durchläuft alle Status bis COMPLETED
+- Live-Status-Updates per WebSocket-Push in die App (Fahrt-Screen mit Timeline)
+- Karte mit MapLibre + Amazon-Location-Tiles im Buchungs-Screen
+
+Noch offen aus Phase 1→2: JWT-Verifikation beim WebSocket-Connect, echtes
+Fahrer-Matching statt Simulation.
