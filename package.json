@@ -1,0 +1,17 @@
+{
+  "name": "call-a-ride",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@10.33.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "pnpm -r --if-present test",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "synth": "pnpm --filter @call-a-ride/backend synth"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.3"
+  }
+}
