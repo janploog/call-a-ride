@@ -115,6 +115,11 @@ function DriversTab() {
     await load();
   }
 
+  async function onBlock(userId: string, blocked: boolean) {
+    await api.blockUser(userId, blocked);
+    await load();
+  }
+
   return (
     <div>
       <nav>
@@ -163,6 +168,10 @@ function DriversTab() {
                 <button className="action reject" onClick={() => onVerify(d.userId, "REJECTED")}>
                   Ablehnen
                 </button>
+                <button className="action" onClick={() => onBlock(d.userId, !d.blocked)}>
+                  {d.blocked ? "Entsperren" : "Sperren"}
+                </button>
+                {d.blocked ? <span className="error"> gesperrt</span> : null}
               </td>
             </tr>
           ))}
@@ -183,12 +192,29 @@ function RidesTab() {
   const [rides, setRides] = useState<AdminRide[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  async function load() {
+    try {
+      const r = await api.listRides();
+      setRides(r.rides);
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Laden fehlgeschlagen");
+    }
+  }
+
   useEffect(() => {
-    api
-      .listRides()
-      .then((r) => setRides(r.rides))
-      .catch((e) => setError(e instanceof Error ? e.message : "Laden fehlgeschlagen"));
+    void load();
   }, []);
+
+  async function onRefund(rideId: string) {
+    if (!window.confirm("Fahrt vollständig erstatten?")) return;
+    try {
+      await api.refundRide(rideId);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erstattung fehlgeschlagen");
+    }
+  }
 
   return (
     <div>
@@ -201,6 +227,7 @@ function RidesTab() {
             <th>Status</th>
             <th>Zahlung</th>
             <th>Preis</th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
@@ -213,6 +240,13 @@ function RidesTab() {
               <td>{r.status}</td>
               <td>{r.paymentStatus ?? "—"}</td>
               <td>{(r.estimatedFareCents / 100).toFixed(2)} €</td>
+              <td>
+                {r.paymentStatus === "PAID" ? (
+                  <button className="action reject" onClick={() => onRefund(r.rideId)}>
+                    Erstatten
+                  </button>
+                ) : null}
+              </td>
             </tr>
           ))}
         </tbody>

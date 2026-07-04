@@ -93,6 +93,7 @@ Alle MVP-Phasen der [Roadmap](docs/architecture.md#4-roadmap) sind umgesetzt:
 | 3 | Stripe Connect: PaymentSheet, Off-Session-Charge mit Provisions-Split, Webhook, Verdienst |
 | 4 | Fahrer-Verifizierung (S3-Dokumente, Admin-Gate), Admin-Dashboard, Preiskonfiguration, Bewertungen |
 | 5 | Stornierung (inkl. Statemachine-Stop + Fahrer-Info), Alarme, Budget-Wächter, Smoke-Test |
+| + | Expo-Push (Angebote/Status auch bei geschlossener App), Fahrthistorie, Navigations-Link & Anruf-Button (Fahrer), Wächter für hängende Fahrten, Admin: Nutzer sperren & Stripe-Erstattungen |
 
 ### Beta-Checkliste (manuell, vor dem ersten echten Fahrgast)
 
@@ -107,6 +108,10 @@ Alle MVP-Phasen der [Roadmap](docs/architecture.md#4-roadmap) sind umgesetzt:
 
 ### Bewusst offen (nach der Beta)
 
-Expo-Push zusätzlich zum WebSocket-Kanal, Hintergrund-Standort, Belege per
-E-Mail (SES), Nummern-Maskierung, gemeinsames UI-Paket für beide Apps,
-CI-Deploy-Pipeline mit OIDC.
+Hintergrund-Standort der Fahrer-App, SMS-Verifizierung der Telefonnummer,
+3D-Secure-Nachzahlungs-Flow, Servicegebiet-Polygon, Belege per E-Mail (SES),
+Nummern-Maskierung, WebSocket-Reconnect-Strategie, gemeinsames UI-Paket,
+DSGVO-Account-Löschprozess, CI-Deploy-Pipeline mit OIDC.
+
+Hinweis Expo-Push: benötigt eine EAS-Projekt-ID (`eas init`); ohne sie
+überspringen die Apps die Registrierung stillschweigend.

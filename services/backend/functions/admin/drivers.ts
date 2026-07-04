@@ -50,6 +50,7 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
         verificationStatus: u.verificationStatus,
         documents: u.documents ?? {},
         payoutsEnabled: u.payoutsEnabled === true,
+        blocked: u.blocked === true,
         updatedAt: u.updatedAt,
       })),
     });

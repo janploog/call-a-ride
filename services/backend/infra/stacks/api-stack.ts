@@ -34,6 +34,7 @@ export interface ApiStackProps extends StackProps {
   setupIntentFn: IFunction;
   stripeOnboardingFn: IFunction;
   stripeWebhookFn: IFunction;
+  refundFn: IFunction;
 }
 
 export class ApiStack extends Stack {
@@ -79,6 +80,7 @@ export class ApiStack extends Stack {
     });
     props.ridesTable.grantWriteData(createRideFn);
     props.configTable.grantReadData(createRideFn);
+    props.usersTable.grantReadData(createRideFn);
     props.rideStateMachine.grantStartExecution(createRideFn);
     createRideFn.addToRolePolicy(geoRoutesPolicy);
 
@@ -213,6 +215,12 @@ export class ApiStack extends Stack {
     });
     props.configTable.grantReadWriteData(adminPricingFn);
 
+    const adminUsersFn = new NodejsFunction(this, "AdminUsersFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "admin/users.ts"),
+    });
+    props.usersTable.grantReadWriteData(adminUsersFn);
+
     const authorizer = new HttpUserPoolAuthorizer("UserPoolAuthorizer", props.userPool, {
       userPoolClients: [props.userPoolClient],
     });
@@ -259,6 +267,8 @@ export class ApiStack extends Stack {
       { path: "/admin/rides", method: apigwv2.HttpMethod.GET, fn: adminRidesFn, name: "AdminRides" },
       { path: "/admin/config/pricing", method: apigwv2.HttpMethod.GET, fn: adminPricingFn, name: "AdminPricingGet" },
       { path: "/admin/config/pricing", method: apigwv2.HttpMethod.PUT, fn: adminPricingFn, name: "AdminPricingPut" },
+      { path: "/admin/users/{userId}/block", method: apigwv2.HttpMethod.POST, fn: adminUsersFn, name: "AdminUserBlock" },
+      { path: "/admin/rides/{rideId}/refund", method: apigwv2.HttpMethod.POST, fn: props.refundFn, name: "AdminRideRefund" },
     ];
     for (const route of authedRoutes) {
       httpApi.addRoutes({

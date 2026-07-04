@@ -2,14 +2,28 @@ import { CfnOutput, Duration, Stack, type StackProps } from "aws-cdk-lib";
 import * as budgets from "aws-cdk-lib/aws-budgets";
 import * as cloudwatch from "aws-cdk-lib/aws-cloudwatch";
 import * as cwActions from "aws-cdk-lib/aws-cloudwatch-actions";
+import type * as dynamodb from "aws-cdk-lib/aws-dynamodb";
+import * as events from "aws-cdk-lib/aws-events";
+import * as targets from "aws-cdk-lib/aws-events-targets";
+import { Runtime } from "aws-cdk-lib/aws-lambda";
+import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { RetentionDays } from "aws-cdk-lib/aws-logs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as subscriptions from "aws-cdk-lib/aws-sns-subscriptions";
 import type * as sfn from "aws-cdk-lib/aws-stepfunctions";
 import type { Construct } from "constructs";
+import { fileURLToPath } from "node:url";
+import path from "node:path";
+
+const functionsDir = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  "../../functions",
+);
 
 export interface ObservabilityStackProps extends StackProps {
   stage: "dev" | "prod";
   rideStateMachine: sfn.IStateMachine;
+  ridesTable: dynamodb.ITable;
   /** E-Mail für Alarme/Budget; per CDK-Kontext: -c alarmEmail=you@example.com */
   alarmEmail?: string;
 }
@@ -64,6 +78,29 @@ export class ObservabilityStack extends Stack {
       alarmDescription: "Gehäufte Lambda-Fehler (accountweit)",
     });
     lambdaErrorsAlarm.addAlarmAction(alarmAction);
+
+    // Wächter für hängende Fahrten: meldet aktive Fahrten ohne Fortschritt
+    const staleMonitorFn = new NodejsFunction(this, "StaleRideMonitorFn", {
+      runtime: Runtime.NODEJS_22_X,
+      memorySize: 256,
+      timeout: Duration.seconds(30),
+      logRetention: RetentionDays.TWO_WEEKS,
+      bundling: { minify: true, sourceMap: true },
+      entry: path.join(functionsDir, "rides/stale-monitor.ts"),
+      environment: {
+        STAGE: props.stage,
+        RIDES_TABLE: props.ridesTable.tableName,
+        ALARM_TOPIC_ARN: alarmTopic.topicArn,
+        NODE_OPTIONS: "--enable-source-maps",
+      },
+    });
+    props.ridesTable.grantReadData(staleMonitorFn);
+    alarmTopic.grantPublish(staleMonitorFn);
+    new events.Rule(this, "StaleRideSchedule", {
+      description: "Alle 30 Minuten nach hängenden Fahrten suchen",
+      schedule: events.Schedule.rate(Duration.minutes(30)),
+      targets: [new targets.LambdaFunction(staleMonitorFn)],
+    });
 
     if (props.alarmEmail) {
       // AWS Budgets rechnet in USD; ~100 € Zielbudget

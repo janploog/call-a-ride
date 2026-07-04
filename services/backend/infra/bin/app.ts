@@ -65,11 +65,13 @@ new ApiStack(app, `${prefix}-api`, {
   setupIntentFn: payments.setupIntentFn,
   stripeOnboardingFn: payments.onboardingFn,
   stripeWebhookFn: payments.webhookFn,
+  refundFn: payments.refundFn,
 });
 new LocationStack(app, `${prefix}-location`, { env, stage });
 new ObservabilityStack(app, `${prefix}-observability`, {
   env,
   stage,
   rideStateMachine: rideFlow.stateMachine,
+  ridesTable: data.ridesTable,
   alarmEmail: app.node.tryGetContext("alarmEmail"),
 });

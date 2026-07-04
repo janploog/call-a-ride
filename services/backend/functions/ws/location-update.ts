@@ -38,7 +38,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   }
   const { position, available, activeRideId } = parsed.data;
 
-  // Nur verifizierte Fahrer nehmen am Matching teil
+  // Nur verifizierte, nicht gesperrte Fahrer nehmen am Matching teil
   if (available) {
     const { Item: user } = await ddb.send(
       new GetCommand({
@@ -46,8 +46,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
         Key: { userId: driverId },
       }),
     );
-    if (user?.verificationStatus !== "APPROVED") {
-      return { statusCode: 403, body: "driver not verified" };
+    if (user?.verificationStatus !== "APPROVED" || user?.blocked === true) {
+      return { statusCode: 403, body: "driver not verified or blocked" };
     }
   }
 

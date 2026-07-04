@@ -25,6 +25,7 @@ export interface AdminDriver {
   verificationStatus: string;
   documents: Record<string, string>;
   payoutsEnabled: boolean;
+  blocked: boolean;
   updatedAt?: string;
 }
 
@@ -68,4 +69,11 @@ export const api = {
       method: "PUT",
       body: JSON.stringify(pricing),
     }),
+  blockUser: (userId: string, blocked: boolean) =>
+    request<{ ok: boolean }>(`/admin/users/${userId}/block`, {
+      method: "POST",
+      body: JSON.stringify({ blocked }),
+    }),
+  refundRide: (rideId: string) =>
+    request<{ ok: boolean }>(`/admin/rides/${rideId}/refund`, { method: "POST" }),
 };

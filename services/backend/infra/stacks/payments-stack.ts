@@ -34,6 +34,7 @@ export class PaymentsStack extends Stack {
   readonly setupIntentFn: NodejsFunction;
   readonly onboardingFn: NodejsFunction;
   readonly webhookFn: NodejsFunction;
+  readonly refundFn: NodejsFunction;
 
   constructor(scope: Construct, id: string, props: PaymentsStackProps) {
     super(scope, id, props);
@@ -80,10 +81,21 @@ export class PaymentsStack extends Stack {
       entry: path.join(functionsDir, "payments/charge-ride.ts"),
       timeout: Duration.seconds(30),
     });
+    this.refundFn = new NodejsFunction(this, "RefundFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "payments/refund.ts"),
+    });
 
-    for (const fn of [this.setupIntentFn, this.onboardingFn, this.webhookFn, chargeFn]) {
+    for (const fn of [
+      this.setupIntentFn,
+      this.onboardingFn,
+      this.webhookFn,
+      chargeFn,
+      this.refundFn,
+    ]) {
       stripeSecret.grantRead(fn);
     }
+    props.ridesTable.grantReadWriteData(this.refundFn);
     props.usersTable.grantReadWriteData(this.setupIntentFn);
     props.usersTable.grantReadWriteData(this.onboardingFn);
     props.usersTable.grantReadWriteData(this.webhookFn);

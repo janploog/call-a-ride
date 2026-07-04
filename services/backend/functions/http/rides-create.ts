@@ -1,6 +1,6 @@
 import type { APIGatewayProxyHandlerV2WithJWTAuthorizer } from "aws-lambda";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { DynamoDBDocumentClient, PutCommand } from "@aws-sdk/lib-dynamodb";
+import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dynamodb";
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
 import { randomUUID } from "node:crypto";
 import { estimateFareCents, rideRequestSchema, type Ride } from "@call-a-ride/core";
@@ -17,6 +17,13 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
   }
   const phoneClaim = event.requestContext.authorizer.jwt.claims.phone_number;
   const riderPhone = typeof phoneClaim === "string" ? phoneClaim : undefined;
+
+  const { Item: riderAccount } = await ddb.send(
+    new GetCommand({ TableName: process.env.USERS_TABLE, Key: { userId: riderId } }),
+  );
+  if (riderAccount?.blocked === true) {
+    return json(403, { error: "account_blocked" });
+  }
 
   const parsed = rideRequestSchema.safeParse(safeJson(event.body));
   if (!parsed.success) {
