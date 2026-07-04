@@ -88,6 +88,12 @@ export class ApiStack extends Stack {
     });
     props.ridesTable.grantReadData(getRideFn);
 
+    const listRidesFn = new NodejsFunction(this, "ListRidesFn", {
+      ...lambdaDefaults,
+      entry: path.join(functionsDir, "http/rides-list.ts"),
+    });
+    props.ridesTable.grantReadData(listRidesFn);
+
     const routeQuoteFn = new NodejsFunction(this, "RouteQuoteFn", {
       ...lambdaDefaults,
       entry: path.join(functionsDir, "http/route-quote.ts"),
@@ -233,6 +239,7 @@ export class ApiStack extends Stack {
       name: string;
     }> = [
       { path: "/rides", method: apigwv2.HttpMethod.POST, fn: createRideFn, name: "CreateRide" },
+      { path: "/rides", method: apigwv2.HttpMethod.GET, fn: listRidesFn, name: "ListRides" },
       { path: "/rides/{rideId}", method: apigwv2.HttpMethod.GET, fn: getRideFn, name: "GetRide" },
       { path: "/route", method: apigwv2.HttpMethod.GET, fn: routeQuoteFn, name: "RouteQuote" },
       { path: "/places/search", method: apigwv2.HttpMethod.GET, fn: placesSearchFn, name: "PlacesSearch" },

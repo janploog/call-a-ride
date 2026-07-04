@@ -15,6 +15,8 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
   if (typeof riderId !== "string" || riderId.length === 0) {
     return json(401, { error: "unauthorized" });
   }
+  const phoneClaim = event.requestContext.authorizer.jwt.claims.phone_number;
+  const riderPhone = typeof phoneClaim === "string" ? phoneClaim : undefined;
 
   const parsed = rideRequestSchema.safeParse(safeJson(event.body));
   if (!parsed.success) {
@@ -46,6 +48,7 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
     ),
     distanceMeters: route.distanceMeters,
     durationSeconds: route.durationSeconds,
+    riderPhone,
     createdAt: now,
     updatedAt: now,
   };

@@ -146,6 +146,9 @@ export default function Home() {
         </View>
       ) : null}
 
+      <Link href="/history" style={styles.linkText}>
+        Meine Fahrten
+      </Link>
       <Link href="/payment-setup" style={styles.linkText}>
         Zahlungsmittel verwalten
       </Link>

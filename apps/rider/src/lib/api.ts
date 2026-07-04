@@ -66,6 +66,22 @@ export async function createSetupIntent(): Promise<SetupIntentResponse> {
   return expectOk(await authFetch("/payments/setup-intent", { method: "POST" }));
 }
 
+export interface RideHistoryEntry {
+  rideId: string;
+  status: string;
+  pickupAddress: string;
+  dropoffAddress: string;
+  distanceMeters: number;
+  estimatedFareCents: number;
+  paymentStatus?: string;
+  createdAt: string;
+}
+
+export async function listMyRides(): Promise<RideHistoryEntry[]> {
+  const data = await expectOk<{ rides: RideHistoryEntry[] }>(await authFetch("/rides"));
+  return data.rides;
+}
+
 export async function submitPushToken(token: string): Promise<void> {
   await expectOk(
     await authFetch("/users/me/push-token", {

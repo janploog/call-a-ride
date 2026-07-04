@@ -38,6 +38,9 @@ export const rideSchema = z.object({
   estimatedFareCents: z.number().int().nonnegative(),
   distanceMeters: z.number().nonnegative(),
   durationSeconds: z.number().nonnegative(),
+  /** Für den Fahrer-Anruf; kommt aus dem verifizierten Cognito-Claim */
+  riderPhone: z.string().optional(),
+  paymentStatus: z.string().optional(),
   createdAt: z.string().datetime(),
   updatedAt: z.string().datetime(),
 });

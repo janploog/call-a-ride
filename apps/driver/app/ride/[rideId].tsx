@@ -2,7 +2,7 @@ import type { Ride, RideStatus } from "@call-a-ride/core";
 import * as Location from "expo-location";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Pressable, Text, View } from "react-native";
+import { ActivityIndicator, Linking, Pressable, Text, View } from "react-native";
 import { getRide, rateRide, updateRideStatus } from "../../src/lib/api";
 import { openDriverSocket, type DriverSocket } from "../../src/lib/ws";
 import { colors, styles } from "../../src/ui";
@@ -117,6 +117,31 @@ export default function DriverRideScreen() {
       </Text>
 
       {error ? <Text style={styles.errorText}>{error}</Text> : null}
+
+      {status === "ASSIGNED" || status === "DRIVER_ARRIVING" || status === "IN_PROGRESS" ? (
+        <View style={{ flexDirection: "row", gap: 10 }}>
+          <Pressable
+            style={[styles.button, { flex: 1 }]}
+            onPress={() => {
+              // Vor Fahrtbeginn zum Abholort navigieren, danach zum Ziel
+              const target = status === "IN_PROGRESS" ? ride.dropoff : ride.pickup;
+              void Linking.openURL(
+                `https://www.google.com/maps/dir/?api=1&destination=${target.lat},${target.lon}&travelmode=driving`,
+              );
+            }}
+          >
+            <Text style={styles.buttonText}>🧭 Navigation</Text>
+          </Pressable>
+          {ride.riderPhone ? (
+            <Pressable
+              style={[styles.button, { flex: 1 }]}
+              onPress={() => void Linking.openURL(`tel:${ride.riderPhone}`)}
+            >
+              <Text style={styles.buttonText}>📞 Anrufen</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
 
       {status === "DRIVER_ARRIVING" || status === "ASSIGNED" ? (
         <Pressable
