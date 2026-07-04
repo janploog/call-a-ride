@@ -14,7 +14,8 @@ import {
 } from "react-native";
 import { Link } from "expo-router";
 import { RideMap } from "../src/components/RideMap";
-import { createRide, getQuote, searchPlaces } from "../src/lib/api";
+import { createRide, getQuote, searchPlaces, submitPushToken } from "../src/lib/api";
+import { registerForPush } from "../src/lib/push";
 import { styles } from "../src/ui";
 
 // Fallback, solange keine Standortfreigabe vorliegt (Berlin Mitte)
@@ -33,6 +34,7 @@ export default function Home() {
 
   useEffect(() => {
     getCurrentUser().catch(() => router.replace("/sign-in"));
+    void registerForPush(submitPushToken);
     (async () => {
       const { status } = await Location.requestForegroundPermissionsAsync();
       if (status === "granted") {

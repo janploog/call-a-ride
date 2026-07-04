@@ -2,6 +2,7 @@ import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient, GetCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb";
 import { coordinateSchema } from "@call-a-ride/core";
 import { z } from "zod";
+import { sendPushToUser } from "../lib/push";
 import { pushToUser } from "../lib/ws-push";
 
 const ddb = DynamoDBDocumentClient.from(new DynamoDBClient({}));
@@ -44,6 +45,17 @@ export const handler = async (rawInput: unknown) => {
         ":attempt": [driverId],
       },
     }),
+  );
+
+  // Push weckt die App; das verbindliche Angebot kommt über WebSocket,
+  // sobald die App die Verbindung (wieder) aufgebaut hat
+  await sendPushToUser(
+    driverId,
+    "Neue Fahrtanfrage",
+    `${(Number(ride.distanceMeters) / 1000).toFixed(1)} km · ${(
+      Number(ride.estimatedFareCents) / 100
+    ).toFixed(2)} € – jetzt annehmen!`,
+    { rideId },
   );
 
   await pushToUser(driverId, {

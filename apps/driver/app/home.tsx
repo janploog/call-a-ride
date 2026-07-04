@@ -8,8 +8,10 @@ import {
   getDriverProfile,
   respondToOffer,
   startStripeOnboarding,
+  submitPushToken,
   type DriverProfile,
 } from "../src/lib/api";
+import { registerForPush } from "../src/lib/push";
 import { openDriverSocket, type DriverSocket } from "../src/lib/ws";
 import { colors, styles } from "../src/ui";
 
@@ -27,6 +29,7 @@ export default function DriverHome() {
   useEffect(() => {
     getCurrentUser().catch(() => router.replace("/sign-in"));
     getDriverProfile().then(setProfile).catch(() => {});
+    void registerForPush(submitPushToken);
     return () => goOffline();
   }, [router]);
 

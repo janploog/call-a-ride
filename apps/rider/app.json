@@ -37,7 +37,8 @@
           "merchantIdentifier": "merchant.com.callaride",
           "enableGooglePay": true
         }
-      ]
+      ],
+      "expo-notifications"
     ]
   }
 }

@@ -21,6 +21,7 @@ export interface RideFlowStackProps extends StackProps {
   ridesTable: dynamodb.ITable;
   connectionsTable: dynamodb.ITable;
   driverLocationsTable: dynamodb.ITable;
+  usersTable: dynamodb.ITable;
   webSocketApi: apigwv2.WebSocketApi;
   wsManagementEndpoint: string;
 }
@@ -53,6 +54,7 @@ export class RideFlowStack extends Stack {
         RIDES_TABLE: props.ridesTable.tableName,
         CONNECTIONS_TABLE: props.connectionsTable.tableName,
         DRIVER_LOCATIONS_TABLE: props.driverLocationsTable.tableName,
+        USERS_TABLE: props.usersTable.tableName,
         WS_ENDPOINT: props.wsManagementEndpoint,
         NODE_OPTIONS: "--enable-source-maps",
       },
@@ -85,6 +87,9 @@ export class RideFlowStack extends Stack {
     props.ridesTable.grantReadWriteData(offerRideFn);
     props.connectionsTable.grantReadWriteData(offerRideFn);
     props.webSocketApi.grantManageConnections(offerRideFn);
+    // Push-Zustellung liest das Expo-Token des Empfängers
+    props.usersTable.grantReadData(advanceFn);
+    props.usersTable.grantReadData(offerRideFn);
 
     const advance = (
       id: string,

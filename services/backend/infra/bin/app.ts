@@ -39,6 +39,7 @@ const rideFlow = new RideFlowStack(app, `${prefix}-rideflow`, {
   ridesTable: data.ridesTable,
   connectionsTable: data.connectionsTable,
   driverLocationsTable: data.driverLocationsTable,
+  usersTable: data.usersTable,
   webSocketApi: realtime.webSocketApi,
   wsManagementEndpoint: realtime.managementEndpoint,
 });

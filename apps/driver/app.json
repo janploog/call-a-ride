@@ -29,7 +29,8 @@
         {
           "locationWhenInUsePermission": "Call-a-Ride Fahrer übermittelt deine Position, damit dir passende Fahrten zugewiesen werden und Fahrgäste deine Anfahrt verfolgen können."
         }
-      ]
+      ],
+      "expo-notifications"
     ]
   }
 }

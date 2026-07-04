@@ -50,6 +50,15 @@ export async function updateRideStatus(
   );
 }
 
+export async function submitPushToken(token: string): Promise<void> {
+  await expectOk(
+    await authFetch("/users/me/push-token", {
+      method: "POST",
+      body: JSON.stringify({ token }),
+    }),
+  );
+}
+
 export async function rateRide(rideId: string, stars: number): Promise<void> {
   await expectOk(
     await authFetch(`/rides/${rideId}/rating`, {

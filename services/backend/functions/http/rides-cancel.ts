@@ -4,6 +4,7 @@ import { DynamoDBDocumentClient, GetCommand } from "@aws-sdk/lib-dynamodb";
 import { SFNClient, StopExecutionCommand } from "@aws-sdk/client-sfn";
 import type { RideStatus } from "@call-a-ride/core";
 import { getUserId } from "../lib/auth";
+import { sendPushToUser } from "../lib/push";
 import { advanceRideStatus } from "../lib/rides";
 import { pushToUser } from "../lib/ws-push";
 
@@ -55,6 +56,12 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
   const driverToNotify = (ride.driverId ?? ride.offeredDriverId) as string | undefined;
   if (driverToNotify) {
     await pushToUser(driverToNotify, { type: "rideCancelled", rideId });
+    await sendPushToUser(
+      driverToNotify,
+      "Fahrt storniert",
+      "Der Fahrgast hat die Fahrt storniert. Du kannst wieder online gehen.",
+      { rideId },
+    );
   }
 
   return json(200, { ok: true, status: "CANCELLED" });
