@@ -4,6 +4,7 @@ import { DynamoDBDocumentClient, GetCommand, PutCommand } from "@aws-sdk/lib-dyn
 import { SFNClient, StartExecutionCommand } from "@aws-sdk/client-sfn";
 import { randomUUID } from "node:crypto";
 import { estimateFareCents, rideRequestSchema, type Ride } from "@call-a-ride/core";
+import { isPhoneVerified } from "../lib/auth";
 import { getPricingConfig } from "../lib/pricing-config";
 import { calculateRoute } from "../lib/routing";
 
@@ -14,6 +15,11 @@ export const handler: APIGatewayProxyHandlerV2WithJWTAuthorizer = async (event) 
   const riderId = event.requestContext.authorizer.jwt.claims.sub;
   if (typeof riderId !== "string" || riderId.length === 0) {
     return json(401, { error: "unauthorized" });
+  }
+  // Der Fahrer muss den Fahrgast erreichen können – ohne verifizierte
+  // Nummer keine Buchung (App bietet die Verifizierung per SMS an)
+  if (!isPhoneVerified(event)) {
+    return json(403, { error: "phone_not_verified" });
   }
   const phoneClaim = event.requestContext.authorizer.jwt.claims.phone_number;
   const riderPhone = typeof phoneClaim === "string" ? phoneClaim : undefined;

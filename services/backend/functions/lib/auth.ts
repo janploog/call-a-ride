@@ -20,3 +20,9 @@ export function getUserId(event: APIGatewayProxyEventV2WithJWTAuthorizer): strin
   const sub = event.requestContext.authorizer.jwt.claims.sub;
   return typeof sub === "string" && sub.length > 0 ? sub : null;
 }
+
+/** Cognito liefert den Claim je nach Pfad als boolean oder als String "true". */
+export function isPhoneVerified(event: APIGatewayProxyEventV2WithJWTAuthorizer): boolean {
+  const claim = event.requestContext.authorizer.jwt.claims.phone_number_verified;
+  return claim === true || claim === "true";
+}

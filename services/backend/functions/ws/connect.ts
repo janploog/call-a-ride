@@ -24,9 +24,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   }
 
   let userId: string;
+  let phoneVerified = false;
   try {
     const claims = await verifier.verify(token);
     userId = claims.sub;
+    const phoneClaim: unknown = claims["phone_number_verified"];
+    phoneVerified = phoneClaim === true || phoneClaim === "true";
   } catch {
     return { statusCode: 401, body: "invalid token" };
   }
@@ -37,6 +40,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       Item: {
         connectionId: event.requestContext.connectionId,
         userId,
+        phoneVerified,
         connectedAt: new Date().toISOString(),
         expiresAt: Math.floor(Date.now() / 1000) + CONNECTION_TTL_SECONDS,
       },

@@ -1,8 +1,8 @@
 import type { ServerMessage } from "@call-a-ride/core";
-import { getCurrentUser, signOut } from "aws-amplify/auth";
+import { fetchUserAttributes, getCurrentUser, signOut } from "aws-amplify/auth";
 import * as Location from "expo-location";
-import { Link, useRouter } from "expo-router";
-import { useEffect, useRef, useState } from "react";
+import { Link, useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Linking, Pressable, Switch, Text, View } from "react-native";
 import {
   getDriverProfile,
@@ -26,6 +26,8 @@ export default function DriverHome() {
   const socketRef = useRef<DriverSocket | null>(null);
   const watcherRef = useRef<Location.LocationSubscription | null>(null);
 
+  const [phoneVerified, setPhoneVerified] = useState(true);
+
   useEffect(() => {
     getCurrentUser().catch(() => router.replace("/sign-in"));
     getDriverProfile().then(setProfile).catch(() => {});
@@ -33,7 +35,16 @@ export default function DriverHome() {
     return () => goOffline();
   }, [router]);
 
+  useFocusEffect(
+    useCallback(() => {
+      fetchUserAttributes()
+        .then((attrs) => setPhoneVerified(attrs.phone_number_verified === "true"))
+        .catch(() => {});
+    }, []),
+  );
+
   const approved = profile?.verificationStatus === "APPROVED";
+  const canGoOnline = approved && phoneVerified;
 
   function goOffline() {
     watcherRef.current?.remove();
@@ -144,10 +155,16 @@ export default function DriverHome() {
         </View>
       ) : null}
 
+      {!phoneVerified ? (
+        <Link href="/verify-phone" style={[styles.errorText, { fontSize: 15 }]}>
+          ⚠️ Telefonnummer bestätigen, um online gehen zu können →
+        </Link>
+      ) : null}
+
       <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
-        <Switch value={online} onValueChange={toggleOnline} disabled={!approved} />
-        <Text style={{ fontSize: 16, color: approved ? colors.text : colors.muted }}>
-          Fahrbereit{approved ? "" : " (erst nach Verifizierung)"}
+        <Switch value={online} onValueChange={toggleOnline} disabled={!canGoOnline} />
+        <Text style={{ fontSize: 16, color: canGoOnline ? colors.text : colors.muted }}>
+          Fahrbereit{canGoOnline ? "" : " (erst nach Verifizierung)"}
         </Text>
       </View>
 

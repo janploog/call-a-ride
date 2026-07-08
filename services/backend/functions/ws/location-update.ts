@@ -38,8 +38,12 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   }
   const { position, available, activeRideId } = parsed.data;
 
-  // Nur verifizierte, nicht gesperrte Fahrer nehmen am Matching teil
+  // Nur verifizierte, nicht gesperrte Fahrer mit bestätigter Telefonnummer
+  // nehmen am Matching teil (phoneVerified stammt aus dem JWT beim Connect)
   if (available) {
+    if (connection?.phoneVerified !== true) {
+      return { statusCode: 403, body: "phone not verified" };
+    }
     const { Item: user } = await ddb.send(
       new GetCommand({
         TableName: process.env.USERS_TABLE,

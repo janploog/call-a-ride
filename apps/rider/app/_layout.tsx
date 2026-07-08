@@ -28,6 +28,7 @@ export default function RootLayout() {
         <Stack.Screen name="ride/[rideId]" options={{ title: "Fahrt" }} />
         <Stack.Screen name="payment-setup" options={{ title: "Zahlungsmittel" }} />
         <Stack.Screen name="history" options={{ title: "Meine Fahrten" }} />
+        <Stack.Screen name="verify-phone" options={{ title: "Nummer bestätigen" }} />
       </Stack>
     </StripeProvider>
   );

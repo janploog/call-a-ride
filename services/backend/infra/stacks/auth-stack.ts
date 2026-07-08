@@ -22,6 +22,9 @@ export class AuthStack extends Stack {
         // Pflicht: Fahrer müssen Fahrgäste telefonisch erreichen können
         phoneNumber: { required: true, mutable: true },
       },
+      // SMS-Versand für die Telefonnummer-Verifizierung (via SNS).
+      // Achtung: neuer Account = SNS-SMS-Sandbox + 1-$-Limit (siehe README)
+      enableSmsRole: true,
       passwordPolicy: {
         minLength: 10,
         requireLowercase: true,

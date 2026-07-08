@@ -1,8 +1,8 @@
 import type { Coordinate, PlaceResult, RouteQuote } from "@call-a-ride/core";
-import { getCurrentUser, signOut } from "aws-amplify/auth";
+import { fetchUserAttributes, getCurrentUser, signOut } from "aws-amplify/auth";
 import * as Location from "expo-location";
-import { useRouter } from "expo-router";
-import { useEffect, useState } from "react";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
@@ -31,6 +31,16 @@ export default function Home() {
   const [quote, setQuote] = useState<RouteQuote | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [phoneVerified, setPhoneVerified] = useState(true);
+
+  // Beim (Wieder-)Fokussieren prüfen – z. B. nach Rückkehr vom Verifizieren
+  useFocusEffect(
+    useCallback(() => {
+      fetchUserAttributes()
+        .then((attrs) => setPhoneVerified(attrs.phone_number_verified === "true"))
+        .catch(() => {});
+    }, []),
+  );
 
   useEffect(() => {
     getCurrentUser().catch(() => router.replace("/sign-in"));
@@ -101,6 +111,12 @@ export default function Home() {
   return (
     <View style={[styles.screen, { justifyContent: "flex-start" }]}>
       <RideMap pickup={pickup} dropoff={destination?.position} />
+
+      {!phoneVerified ? (
+        <Link href="/verify-phone" style={[styles.errorText, { fontSize: 15 }]}>
+          ⚠️ Telefonnummer bestätigen, um Fahrten buchen zu können →
+        </Link>
+      ) : null}
 
       <Text style={styles.subtitle}>Abholung: {pickupLabel}</Text>
 

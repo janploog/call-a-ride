@@ -94,6 +94,7 @@ Alle MVP-Phasen der [Roadmap](docs/architecture.md#4-roadmap) sind umgesetzt:
 | 4 | Fahrer-Verifizierung (S3-Dokumente, Admin-Gate), Admin-Dashboard, Preiskonfiguration, Bewertungen |
 | 5 | Stornierung (inkl. Statemachine-Stop + Fahrer-Info), Alarme, Budget-Wächter, Smoke-Test |
 | + | Expo-Push (Angebote/Status auch bei geschlossener App), Fahrthistorie, Navigations-Link & Anruf-Button (Fahrer), Wächter für hängende Fahrten, Admin: Nutzer sperren & Stripe-Erstattungen |
+| + | SMS-Verifizierung der Telefonnummer (Cognito/SNS): ohne bestätigte Nummer keine Buchung und kein Online-Gehen (serverseitig erzwungen) |
 
 ### Beta-Checkliste (manuell, vor dem ersten echten Fahrgast)
 
@@ -106,11 +107,19 @@ Alle MVP-Phasen der [Roadmap](docs/architecture.md#4-roadmap) sind umgesetzt:
    (Background-Location ist bewusst noch nicht aktiviert)
 5. AGB/Datenschutzerklärung und PBefG-Klärung (siehe docs/architecture.md, Risiko 1)
 
+### SMS-Versand freischalten (einmalig)
+
+Neue AWS-Accounts stecken in der **SNS-SMS-Sandbox** (SMS nur an verifizierte
+Testnummern) und haben ein Ausgabenlimit von **1 $/Monat**. Vor dem Livegang
+beides per Support-Case lösen: Produktionszugang für SMS beantragen und das
+Limit erhöhen (z. B. 50 $). Kosten in DE: ~6–9 ct pro SMS, fällt nur bei
+Registrierung/Nummernwechsel an.
+
 ### Bewusst offen (nach der Beta)
 
-Hintergrund-Standort der Fahrer-App, SMS-Verifizierung der Telefonnummer,
-3D-Secure-Nachzahlungs-Flow, Servicegebiet-Polygon, Belege per E-Mail (SES),
-Nummern-Maskierung, WebSocket-Reconnect-Strategie, gemeinsames UI-Paket,
+Hintergrund-Standort der Fahrer-App, 3D-Secure-Nachzahlungs-Flow,
+Servicegebiet-Polygon, Belege per E-Mail (SES), Nummern-Maskierung,
+WebSocket-Reconnect-Strategie, gemeinsames UI-Paket,
 DSGVO-Account-Löschprozess, CI-Deploy-Pipeline mit OIDC.
 
 Hinweis Expo-Push: benötigt eine EAS-Projekt-ID (`eas init`); ohne sie

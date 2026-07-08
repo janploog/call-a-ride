@@ -23,6 +23,7 @@ export default function RootLayout() {
         <Stack.Screen name="ride/[rideId]" options={{ title: "Aktive Fahrt" }} />
         <Stack.Screen name="earnings" options={{ title: "Verdienst" }} />
         <Stack.Screen name="documents" options={{ title: "Dokumente" }} />
+        <Stack.Screen name="verify-phone" options={{ title: "Nummer bestätigen" }} />
       </Stack>
     </>
   );
