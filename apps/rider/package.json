@@ -21,7 +21,8 @@
     "expo-location": "~57.0.2",
     "@maplibre/maplibre-react-native": "^11.3.6",
     "@stripe/stripe-react-native": "0.64.0",
-    "expo-notifications": "~57.0.3"
+    "expo-notifications": "~57.0.3",
+    "expo-dev-client": "~57.0.5"
   },
   "devDependencies": {
     "@types/react": "~19.2.2",
@@ -32,7 +33,12 @@
     "android": "expo start --android",
     "ios": "expo start --ios",
     "web": "expo start --web",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "build:dev": "eas build --profile development",
+    "build:preview": "eas build --profile preview",
+    "build:prod": "eas build --profile production",
+    "submit:preview": "eas submit --profile preview",
+    "submit:prod": "eas submit --profile production"
   },
   "private": true
 }

@@ -75,6 +75,37 @@ cd apps/rider
 npx expo run:android   # oder run:ios — Dev-Build erforderlich
 ```
 
+### Builds & Verteilung (EAS)
+
+Beide Apps haben drei Build-Profile in `eas.json`; die Umgebung
+(Backend-URLs, Keys) und die App-Variante werden **pro Profil eingebrannt**:
+
+| Profil | Variante | Backend | Zweck |
+|---|---|---|---|
+| `development` | `com.callaride.*.dev` · „(Dev)" | dev | Simulator/Gerät, Dev-Client |
+| `preview` | `com.callaride.*.preview` · „(Beta)" | dev | TestFlight / Play internal testing |
+| `production` | `com.callaride.*` | prod | App Store / Play Store |
+
+Die Varianten haben eigene Bundle-IDs und sind parallel installierbar.
+Einmalige Einrichtung, danach bauen/einreichen:
+
+```bash
+npm i -g eas-cli && eas login
+cd apps/rider && eas init          # schreibt die Projekt-ID → in eas.json
+                                   # (EAS_PROJECT_ID) und .env eintragen
+# REPLACE_*-Platzhalter in eas.json füllen (URLs aus den Stack-Outputs,
+# Apple-Team/ASC-App-IDs, Play-Service-Account)
+pnpm run build:preview             # Build für TestFlight/Play internal
+pnpm run submit:preview            # einreichen
+pnpm run build:prod && pnpm run submit:prod   # Store-Release (prod-Backend)
+```
+
+Gleiches Vorgehen in `apps/driver`. Hinweis: `preview`/`production` brauchen
+je einen eigenen App-Eintrag in App Store Connect (eigene Bundle-ID);
+Versionsnummern verwaltet EAS remote (`appVersionSource: remote`,
+`autoIncrement`). Lokale Simulator-Builds gehen weiterhin ohne EAS über
+`npx expo run:ios|android` mit `.env`.
+
 > **Hinweis:** Seit Phase 1 enthält die App das native MapLibre-Modul für die
 > Amazon-Location-Karte — **Expo Go reicht nicht mehr**, es braucht einen
 > Dev-Build (`npx expo run:android|ios` lokal oder EAS Build).
@@ -122,5 +153,6 @@ Servicegebiet-Polygon, Belege per E-Mail (SES), Nummern-Maskierung,
 WebSocket-Reconnect-Strategie, gemeinsames UI-Paket,
 DSGVO-Account-Löschprozess, CI-Deploy-Pipeline mit OIDC.
 
-Hinweis Expo-Push: benötigt eine EAS-Projekt-ID (`eas init`); ohne sie
+Hinweis Expo-Push: benötigt die EAS-Projekt-ID (`eas init`, dann als
+`EAS_PROJECT_ID` in `eas.json`-Profilen bzw. lokal in `.env`); ohne sie
 überspringen die Apps die Registrierung stillschweigend.
